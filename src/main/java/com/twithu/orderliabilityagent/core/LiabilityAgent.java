@@ -1,0 +1,75 @@
+package com.twithu.orderliabilityagent.core;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.twithu.orderliabilityagent.advisor.TokenUsageAdvisor;
+import com.twithu.orderliabilityagent.custom.CustomJdbcChatMemoryRepository;
+import com.twithu.orderliabilityagent.model.dto.ExtractResult;
+import com.twithu.orderliabilityagent.model.dto.PreprocessResult;
+import com.twithu.orderliabilityagent.rag.LoggerAdvisor;
+import jakarta.annotation.Resource;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.stereotype.Component;
+
+@Component
+public class LiabilityAgent {
+
+
+    @Resource
+    private ResourcePatternResolver resourcePatternResolver;
+
+
+    private final ChatClient chatClient;
+
+    public LiabilityAgent(ChatModel deepSeekChatModel, CustomJdbcChatMemoryRepository customJdbcChatMemoryRepository) {
+        ChatMemory chatMemory = MessageWindowChatMemory.builder().chatMemoryRepository(customJdbcChatMemoryRepository).maxMessages(10).build(); // 这里暂时将对话记忆添加到内存中
+        chatClient = ChatClient.builder(deepSeekChatModel)
+                // .defaultSystem()
+                .defaultAdvisors(
+                        new LoggerAdvisor()
+                        , new TokenUsageAdvisor()
+                        , MessageChatMemoryAdvisor.builder(chatMemory).build()
+                )
+                .build();
+    }
+
+
+
+    // region 测试代码
+
+    public String chat(String prompt, String chatId){
+        String res = chatClient.prompt(prompt)
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+                .call()
+                .content();
+        System.out.println(res);
+        return res;
+    }
+
+    /**
+     * 抽取用户输入的关键信息
+     */
+    public void chatOutputStructure(String prompt, String chatId){
+        Action res = chatClient.prompt(prompt)
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+                .call()
+                .entity(Action.class
+                        // , spec -> spec.validateSchema() //保证输出符合规则，不失败
+                                // .useProviderStructuredOutput() // 要求上游强制结构化输出
+                );
+        System.out.println(res);
+    }
+
+    // @JsonProperty 作用于字段，解析 JSON 时将字段名映射为指定的名称
+    record Action(@JsonProperty("时间") String AAA, @JsonProperty("地点") String BBB) {
+    }
+
+    // endregion
+
+
+}
