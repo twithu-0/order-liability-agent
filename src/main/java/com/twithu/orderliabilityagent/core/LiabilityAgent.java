@@ -38,6 +38,29 @@ public class LiabilityAgent {
                 .build();
     }
 
+    /** 结构化输出template */
+    private final String template = """
+            originalUserPrompt:{userPrompt}.
+            Identified attributes from the originalUserPrompt:
+            orderNo:{orderNo},channelName:{customerName},supplierName:{supplierName}.
+            """;
+
+    public ExtractResult extract(PreprocessResult preprocessResult, String chatId) {
+        ExtractResult result = chatClient.prompt()
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+                .system(resourcePatternResolver.getResource("classpath:docs/extractPrompt.txt"))
+                .user(promptUserSpec -> promptUserSpec.text(template)
+                        .param("userPrompt", preprocessResult.getNormalizedInput())
+                        .param("orderNo", preprocessResult.getOrderNoHint())
+                        .param("customerName", preprocessResult.getCustomerHint())
+                        .param("supplierName", preprocessResult.getSupplierHint()))
+                .call()
+                .entity(ExtractResult.class
+                        , spec -> spec.validateSchema() //保证输出符合规则，不失败
+                        .useProviderStructuredOutput() // 要求上游强制结构化输出
+                );
+        return result;
+    }
 
 
     // region 测试代码
