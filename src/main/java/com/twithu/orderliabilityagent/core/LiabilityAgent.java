@@ -16,6 +16,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
 
+import static com.twithu.orderliabilityagent.custom.CustomJdbcChatMemoryRepository.MAX_MESSAGE;
+
 @Component
 public class LiabilityAgent {
 
@@ -27,7 +29,8 @@ public class LiabilityAgent {
     private final ChatClient chatClient;
 
     public LiabilityAgent(ChatModel deepSeekChatModel, CustomJdbcChatMemoryRepository customJdbcChatMemoryRepository) {
-        ChatMemory chatMemory = MessageWindowChatMemory.builder().chatMemoryRepository(customJdbcChatMemoryRepository).maxMessages(10).build(); // 这里暂时将对话记忆添加到内存中
+        ChatMemory chatMemory = MessageWindowChatMemory.builder()
+                .chatMemoryRepository(customJdbcChatMemoryRepository).maxMessages(MAX_MESSAGE).build();
         chatClient = ChatClient.builder(deepSeekChatModel)
                 // .defaultSystem()
                 .defaultAdvisors(

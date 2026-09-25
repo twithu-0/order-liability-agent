@@ -1,22 +1,18 @@
 package com.twithu.orderliabilityagent.custom;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.twithu.orderliabilityagent.entity.Session;
-import com.twithu.orderliabilityagent.mapper.SessionMapper;
-import com.twithu.orderliabilityagent.model.enums.SessionStatus;
+import com.twithu.orderliabilityagent.entity.ChatMemory;
+import com.twithu.orderliabilityagent.mapper.ChatMemoryMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.*;
-import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -26,9 +22,19 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
     private JdbcTemplate mysqlJdbcTemplate;
 
     @Resource
-    private SessionMapper sessionMapper;
+    private ChatMemoryMapper chatMemoryMapper;
 
-    private static final String METADATA_KEY = "create_time";
+    public static final Integer MAX_MESSAGE = 10; // 允许最多历史对话上下文
+
+    /**
+     * metadata 中承载会话内单调序号的 key。
+     * <p>隐含契约：只有 findByConversationId（读回路径）会给消息写入该 key；
+     * 框架本轮新生成的 UserMessage/AssistantMessage 不会自带它。
+     * saveAll 依据"metadata 是否含该 key"区分【已入库历史消息】与【本轮待追加新消息】。
+     * 若将来有其它路径给新消息预置了该 key，此判据会失效。</p>
+     */
+    private static final String METADATA_KEY = "sequence_id";
+
     @Override
     public List<String> findConversationIds() {
         return mysqlJdbcTemplate.query("select distinct session_no from t_chat_memory"
@@ -38,26 +44,36 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
     @Override
     public List<Message> findByConversationId(String conversationId) {
 
-        List<Session> sessionList = sessionMapper.selectList(new QueryWrapper<Session>().eq("session_no", conversationId));
-        List<Message> messageList = new ArrayList<>();
-        for (Session session : sessionList) {
-            MessageType messageType = MessageType.valueOf(session.getType());
-            Map<String, Object> metadata = new HashMap<>();// 这里保存初始创建时间
-            if (session.getCreateTime() != null){
-                metadata.put(METADATA_KEY, LocalDateTime.now());
-            }
-            switch (messageType) {
-                case USER -> messageList.add(UserMessage.builder().text(session.getContent()).metadata(metadata).build());
-                case ASSISTANT -> messageList.add(AssistantMessage.builder().content(session.getContent()).properties(metadata).build());
-                case SYSTEM -> messageList.add(SystemMessage.builder().text(session.getContent()).metadata(metadata).build());
+        List<ChatMemory> memoryList = chatMemoryMapper.selectList(new QueryWrapper<ChatMemory>().eq("session_no", conversationId));
+        // 对话顺序 新->旧
+        memoryList.sort(Comparator.comparingInt(ChatMemory::getSequenceId).reversed());
+
+        boolean isPaired = false;
+        List<Message> addMessageList = new ArrayList<>();
+        for (ChatMemory chatMemory : memoryList) {
+            MessageType messageType = MessageType.valueOf(chatMemory.getType());
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put(METADATA_KEY, chatMemory.getSequenceId());
+            Message message = switch (messageType) {
+                case USER -> {
+                    isPaired = true;
+                    yield UserMessage.builder().text(chatMemory.getContent()).metadata(metadata).build();
+                }
+                case ASSISTANT -> AssistantMessage.builder().content(chatMemory.getContent()).properties(metadata).build();
+                case SYSTEM -> SystemMessage.builder().text(chatMemory.getContent()).metadata(metadata).build();
+                case TOOL -> null; // 工具中间消息不作为记忆返回
+            };
+            addMessageList.add(message);
+            if (addMessageList.size() >= MAX_MESSAGE && isPaired){
+                return new ArrayList<>(addMessageList.reversed());
             }
         }
-        return messageList;
+        return new ArrayList<>(addMessageList.reversed());
     }
 
     /**
-     *  chatMemory 的 saveAll() 策略是替换对话历史
-     *  落实在具体实现方法，则表现为先删除再插入全部
+     * chatMemory 的 saveAll() 默认策略是替换对话历史（全量删重插）。
+     * 这里改为追加模式：只插入本轮尚未入库的新消息，不删除历史。
      */
     @Override
     public void saveAll(String conversationId, List<Message> messages) {
@@ -65,52 +81,59 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
         Assert.notNull(messages, "messages cannot be null");
         Assert.noNullElements(messages, "messages cannot contain null elements");
 
-
         List<Message> persistableMessages = messages.stream()
                 .filter(m -> !(m instanceof ToolResponseMessage)
                         && !(m instanceof AssistantMessage am && am.hasToolCalls()))
                 .toList();
-        if ( persistableMessages.size() < messages.size()) {
-            log.warn(
-                    "CustomJdbcChatMemoryRepository 已过滤掉工具调用信息, session_no: "
-                            + conversationId);
+        if (persistableMessages.size() < messages.size()) {
+            log.warn("CustomJdbcChatMemoryRepository 已过滤掉工具调用信息, session_no: {}", conversationId);
         }
 
-        // 先删除之前的对话信息
-        this.deleteByConversationId(conversationId);
-        // 再批量插入全部的对话信息
+        // 基于过滤后的可持久化消息，挑出本轮尚未入库的新消息（见 METADATA_KEY 隐含契约）
+        List<Message> addMessageList = persistableMessages.stream()
+                .filter(message -> message.getMetadata().get(METADATA_KEY) == null)
+                .collect(Collectors.toList());
+        if (addMessageList.isEmpty()) {
+            return; // 没有新消息需要追加
+        }
+
+        // 由 DB 计算会话内起始序号（MAX+1），避免内存态在重启/多实例下撞号；
+        // 同一批次内多条新消息用连续递增序号，保证与插入顺序一致。
+        int baseSeq = nextSequenceId(conversationId);
+        List<Object[]> batchArgs = new ArrayList<>(addMessageList.size());
+        for (int i = 0; i < addMessageList.size(); i++) {
+            Message message = addMessageList.get(i);
+            batchArgs.add(new Object[]{
+                    conversationId,
+                    message.getText(),
+                    message.getMessageType().name(),
+                    baseSeq + i
+            });
+        }
         mysqlJdbcTemplate.batchUpdate(
-                "INSERT INTO t_session " +
-                        "(session_no, type, content, status, create_time, sequence_id) " +
-                        "VALUES (?, ?, ?, ?, ?, ?)"
-                , new AddBatchPreparedStatement(conversationId, persistableMessages)
+                "INSERT INTO t_chat_memory " +
+                        "(session_no, content, type, create_time, sequence_id) " +
+                        "VALUES (?, ?, ?, now(), ?)",
+                batchArgs
         );
+    }
+
+    /**
+     * 查询该会话当前最大 sequence_id + 1；无记录时从 1 开始。
+     * 由 DB 生成序号，天然规避进程内状态在重启/多副本下的不一致。
+     */
+    private int nextSequenceId(String conversationId) {
+        Integer max = mysqlJdbcTemplate.query(
+                "SELECT COALESCE(MAX(sequence_id), 0) FROM t_chat_memory WHERE session_no = ?",
+                rs -> rs.next() ? rs.getInt(1) : 0,
+                conversationId);
+        return (max == null ? 0 : max) + 1;
     }
 
     @Override
     public void deleteByConversationId(String conversationId) {
-        mysqlJdbcTemplate.update("DELETE FROM t_session WHERE session_no = ?", conversationId);
-    }
-
-    private record AddBatchPreparedStatement(String conversationId,
-                                             List<Message> messages) implements BatchPreparedStatementSetter {
-
-        @Override
-        public void setValues(PreparedStatement ps, int i) throws SQLException {
-            var message = this.messages.get(i);
-            ps.setString(1, conversationId);
-            ps.setString(2, message.getMessageType().name());
-            ps.setString(3, message.getText());
-            ps.setString(4, SessionStatus.PENDING.getCode());
-            ps.setObject(5, message.getMetadata().get(METADATA_KEY) == null ? LocalDateTime.now() : message.getMetadata().get(METADATA_KEY));
-            ps.setLong(6, i + 1);
-
-        }
-
-        @Override
-        public int getBatchSize() {
-            return this.messages.size();
-        }
+        // 不处理，采取追加模式
+        // mysqlJdbcTemplate.update("DELETE FROM t_session WHERE session_no = ?", conversationId);
     }
 
 }

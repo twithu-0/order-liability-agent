@@ -10,10 +10,6 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 判责会话实体。
- * <p>对应表 t_liability_session；一次客服对话 = 一次判责请求。</p>
- */
 @Data
 @Builder
 @NoArgsConstructor
