@@ -1,0 +1,9 @@
+package com.twithu.orderliabilityagent.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.twithu.orderliabilityagent.entity.User;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface UserMapper extends BaseMapper<User> {
+}
