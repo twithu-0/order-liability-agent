@@ -12,13 +12,10 @@ import java.math.BigDecimal;
 public interface SessionService {
 
     /**
-     * 创建判责会话（状态 PENDING，生成唯一 sessionNo）。
+     * 创建判责会话。
      *
-     * @param userInput 客服输入原文
-     * @param caseNo    关联案例编号（评测场景使用，可为 null）
-     * @return 新建会话（含自增 id）
      */
-    Session createSession(String userInput, String caseNo);
+    Session createSession(Long userId, String userInput);
 
     /**
      * 标记会话开始处理：PENDING → RUNNING。
@@ -35,7 +32,7 @@ public interface SessionService {
      * @param costEstimate 成本估算（元），可为 null
      * @param latencyMs    总耗时（毫秒）
      */
-    void markCompleted(Long sessionId, String modelName, Integer totalTokens,
+    void markCompleted(Long sessionId, String modelName, Long totalTokens,
                        BigDecimal costEstimate, Integer latencyMs);
 
     /**
@@ -46,15 +43,5 @@ public interface SessionService {
      * @param errorMessage 失败原因（超长自动截断）
      */
     void markFailed(Long sessionId, String errorMessage);
-
-    /**
-     * 按主键查询会话，不存在抛 NOT_FOUND_ERROR。
-     */
-    Session getById(Long sessionId);
-
-    /**
-     * 按会话编号查询会话，不存在抛 NOT_FOUND_ERROR。
-     */
-    Session getBySessionNo(String sessionNo);
 
 }

@@ -14,6 +14,8 @@ public class AppController {
 
     @RequestMapping("/liability/judge")
     public BaseResponse<String> liabilityJudge() {
-        return orchestrator.execute("liability judge", "1a2ff34d567");
+
+        // return orchestrator.execute("liability judge", "");
+        return null;
     }
 }

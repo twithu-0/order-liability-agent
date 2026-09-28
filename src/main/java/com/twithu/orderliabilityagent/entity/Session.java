@@ -14,10 +14,6 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * 判责会话实体。
- * <p>对应表 t_liability_session；一次客服对话 = 一次判责请求。</p>
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -32,7 +28,7 @@ public class Session implements Serializable  {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 会话编号，如 SES-20261116-000001 */
+    /** 对话编号 */
     private String sessionNo;
 
     /** 订单编号 */
@@ -46,6 +42,9 @@ public class Session implements Serializable  {
     /** 供应商 */
     private String supplier;
 
+    /** 问题维度，P2 事实抽取回填；评测时按维度分组统计一致率 */
+    private String dimension;
+
     /** 会话内容 */
     private String content;
 
@@ -55,8 +54,8 @@ public class Session implements Serializable  {
     /** 使用的模型 */
     private String modelName;
 
-    /** 消耗 token 总数 */
-    private long totalTokens;
+    /** 消耗 token 总数；未统计时为 null，不用基本类型避免写出 0 */
+    private Long totalTokens;
 
     /** 总耗时（毫秒） */
     private Integer timeCost;

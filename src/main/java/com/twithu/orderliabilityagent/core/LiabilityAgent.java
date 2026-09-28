@@ -11,7 +11,6 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
-import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
@@ -59,7 +58,7 @@ public class LiabilityAgent {
                         .param("supplierName", preprocessResult.getSupplierHint()))
                 .call()
                 .entity(ExtractResult.class
-                        , spec -> spec.validateSchema() //保证输出符合规则，不失败
+                        , spec -> spec.validateSchema() //失败带错误反馈重试，默认最多 3 次
                         .useProviderStructuredOutput() // 要求上游强制结构化输出
                 );
         return result;
