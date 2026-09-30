@@ -51,6 +51,7 @@ public class UserPromptPreprocess {
             } else {
                 result.setLiabilityRequest(false);
                 result.setOrderNoHint(null);
+                result.addMissingSlot("orderNo");
             }
 
             // 2. 渠道抽取
@@ -63,8 +64,11 @@ public class UserPromptPreprocess {
                     extractHint(normalized, "供应商", SUPPLIER_SET, SUPPLIER_STOP_KEYWORDS)
             );
 
-            if(result.getCustomerHint() == null || result.getSupplierHint() == null){
-                result.setLiabilityRequest(false);
+            if (result.getCustomerHint() == null) {
+                result.addMissingSlot("channel");
+            }
+            if (result.getSupplierHint() == null) {
+                result.addMissingSlot("supplier");
             }
         } catch (Exception e) {
             result.setLiabilityRequest(false);

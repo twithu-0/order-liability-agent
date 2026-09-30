@@ -59,7 +59,7 @@ public class LiabilityAgent {
                 .call()
                 .entity(ExtractResult.class
                         , spec -> spec.validateSchema() //失败带错误反馈重试，默认最多 3 次
-                        .useProviderStructuredOutput() // 要求上游强制结构化输出
+                        .useProviderStructuredOutput() // 要求上游强制结构化输出,这里上游DS模型没有实现接口，先不管。
                 );
         return result;
     }

@@ -9,7 +9,7 @@ import java.util.List;
 @Data
 public class PreprocessResult {
 
-    /** false 表明订单号/渠道/供应商没抽全。旧逻辑据此直接拒答，新流程改为产出 missingSlots 走追问 */
+    /** false 表明订单号/渠道/供应商没抽全。产出 missingSlots 走追问 */
     private boolean isLiabilityRequest;
 
     private String normalizedInput;
@@ -19,7 +19,7 @@ public class PreprocessResult {
 
     /**
      * 缺哪些槽位，元素用 CaseFacts 的字段名（orderNo / channel / supplier）。
-     * <p>P1 闸门不再"拒答"，而是把缺口交给 P3 生成追问话术。</p>
+     * 把缺口交给 P3 生成追问话术。
      */
     @Nullable
     private List<String> missingSlots = new ArrayList<>();
