@@ -1,0 +1,2859 @@
+[
+  {
+    "rule_id": "H-01",
+    "name": "酒店名称不一致（别名、错字、翻译错误），客户找不到或走错店",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_NAME_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "酒店确认单",
+      "渠道页面",
+      "名称映射表"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-01 酒店名称不一致（别名、错字、翻译错误），客户找不到或走错店\n- 维度: hotel\n- 问题类型: HOTEL_NAME_MISMATCH\n- 所需证据: 酒店确认单、渠道页面、名称映射表\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-02",
+    "name": "酒店地址文本错误或不完整（缺路名/门牌/楼层）",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_ADDRESS_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "地址截图",
+      "酒店官网/确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-02 酒店地址文本错误或不完整（缺路名/门牌/楼层）\n- 维度: hotel\n- 问题类型: HOTEL_ADDRESS_ERROR\n- 所需证据: 地址截图、酒店官网/确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-03",
+    "name": "地址文本正确，但地图定位/坐标错误",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_COORDINATE_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "地图截图",
+      "坐标",
+      "酒店地址"
+    ],
+    "default_liability": "CHANNEL_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-03 地址文本正确，但地图定位/坐标错误\n- 维度: hotel\n- 问题类型: HOTEL_COORDINATE_ERROR\n- 所需证据: 地图截图、坐标、酒店地址\n- 定责边界: 渠道（渠道生成 pin）；我司（我司提供坐标）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-04",
+    "name": "酒店电话错误、空号、非前台电话",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_PHONE_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "通话记录",
+      "酒店前台电话",
+      "页面截图"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-04 酒店电话错误、空号、非前台电话\n- 维度: hotel\n- 问题类型: HOTEL_PHONE_ERROR\n- 所需证据: 通话记录、酒店前台电话、页面截图\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-05",
+    "name": "酒店城市/商圈/行政区错误",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_CITY_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "城市/商圈字段",
+      "地图",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-05 酒店城市/商圈/行政区错误\n- 维度: hotel\n- 问题类型: HOTEL_CITY_ERROR\n- 所需证据: 城市/商圈字段、地图、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-06",
+    "name": "酒店星级、品牌、连锁归属错误",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_STAR_BRAND_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "星级/品牌证明",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-06 酒店星级、品牌、连锁归属错误\n- 维度: hotel\n- 问题类型: HOTEL_STAR_BRAND_ERROR\n- 所需证据: 星级/品牌证明、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-07",
+    "name": "酒店停业、装修、临时关闭但未下架",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_CLOSED_NOT_DELISTED",
+    "priority": 100,
+    "evidence_required": [
+      "停业通知",
+      "邮件/API 日志",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-07 酒店停业、装修、临时关闭但未下架\n- 维度: hotel\n- 问题类型: HOTEL_CLOSED_NOT_DELISTED\n- 所需证据: 停业通知、邮件/API 日志、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-08",
+    "name": "酒店更名/换牌未同步",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_RENAME_NOT_SYNCED",
+    "priority": 100,
+    "evidence_required": [
+      "更名通知",
+      "新旧名称",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-08 酒店更名/换牌未同步\n- 维度: hotel\n- 问题类型: HOTEL_RENAME_NOT_SYNCED\n- 所需证据: 更名通知、新旧名称、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-09",
+    "name": "酒店图片与实际酒店不符（错店、效果图、旧图）",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_IMAGE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "图片",
+      "酒店确认",
+      "素材日志"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-09 酒店图片与实际酒店不符（错店、效果图、旧图）\n- 维度: hotel\n- 问题类型: HOTEL_IMAGE_MISMATCH\n- 所需证据: 图片、酒店确认、素材日志\n- 定责边界: 供应商（源图错）；渠道（渠道配图错）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-10",
+    "name": "入住指引、前台位置、入口错误",
+    "dimension": "hotel",
+    "issue_type": "CHECKIN_GUIDE_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "指引文本",
+      "酒店确认",
+      "客户聊天"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-10 入住指引、前台位置、入口错误\n- 维度: hotel\n- 问题类型: CHECKIN_GUIDE_ERROR\n- 所需证据: 指引文本、酒店确认、客户聊天\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "H-11",
+    "name": "酒店 ID/重复 listing 映射错误",
+    "dimension": "hotel",
+    "issue_type": "HOTEL_MAPPING_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "酒店 ID",
+      "映射表",
+      "两张页面"
+    ],
+    "default_liability": "OURS_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## H-11 酒店 ID/重复 listing 映射错误\n- 维度: hotel\n- 问题类型: HOTEL_MAPPING_ERROR\n- 所需证据: 酒店 ID、映射表、两张页面\n- 定责边界: 我司（映射错）；供应商（重复 ID）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-01",
+    "name": "房型名称/等级不一致（Deluxe vs Superior）",
+    "dimension": "room_type",
+    "issue_type": "ROOM_TYPE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型映射表",
+      "确认单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-01 房型名称/等级不一致（Deluxe vs Superior）\n- 维度: room_type\n- 问题类型: ROOM_TYPE_MISMATCH\n- 所需证据: 房型映射表、确认单、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-02",
+    "name": "床型不一致（大床/双床）",
+    "dimension": "room_type",
+    "issue_type": "BED_TYPE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "确认单",
+      "订单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-02 床型不一致（大床/双床）\n- 维度: room_type\n- 问题类型: BED_TYPE_MISMATCH\n- 所需证据: 确认单、订单、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-03",
+    "name": "床数量不一致（1 张 vs 2 张）",
+    "dimension": "room_type",
+    "issue_type": "BED_COUNT_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "确认单",
+      "订单",
+      "入住照片"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-03 床数量不一致（1 张 vs 2 张）\n- 维度: room_type\n- 问题类型: BED_COUNT_MISMATCH\n- 所需证据: 确认单、订单、入住照片\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-04",
+    "name": "房间面积不符（超出合理误差，如 25㎡ 写成 15㎡）",
+    "dimension": "room_type",
+    "issue_type": "ROOM_AREA_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型信息",
+      "页面",
+      "酒店证明"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-04 房间面积不符（超出合理误差，如 25㎡ 写成 15㎡）\n- 维度: room_type\n- 问题类型: ROOM_AREA_MISMATCH\n- 所需证据: 房型信息、页面、酒店证明\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-05",
+    "name": "楼层/高楼层承诺未兑现",
+    "dimension": "room_type",
+    "issue_type": "FLOOR_PROMISE_BROKEN",
+    "priority": 100,
+    "evidence_required": [
+      "订单备注",
+      "确认单",
+      "房卡"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-05 楼层/高楼层承诺未兑现\n- 维度: room_type\n- 问题类型: FLOOR_PROMISE_BROKEN\n- 所需证据: 订单备注、确认单、房卡\n- 定责边界: 供应商（房态分配）；渠道（承诺 guaranteed）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-06",
+    "name": "有窗/无窗不一致",
+    "dimension": "room_type",
+    "issue_type": "WINDOW_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型设施",
+      "照片",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-06 有窗/无窗不一致\n- 维度: room_type\n- 问题类型: WINDOW_MISMATCH\n- 所需证据: 房型设施、照片、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-07",
+    "name": "景观/朝向不一致（海景/城景/园景）",
+    "dimension": "room_type",
+    "issue_type": "VIEW_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型描述",
+      "照片",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-07 景观/朝向不一致（海景/城景/园景）\n- 维度: room_type\n- 问题类型: VIEW_MISMATCH\n- 所需证据: 房型描述、照片、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-08",
+    "name": "入住人数/加床能力不一致",
+    "dimension": "room_type",
+    "issue_type": "OCCUPANCY_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型容量",
+      "订单人数",
+      "加床记录"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-08 入住人数/加床能力不一致\n- 维度: room_type\n- 问题类型: OCCUPANCY_MISMATCH\n- 所需证据: 房型容量、订单人数、加床记录\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-09",
+    "name": "吸烟/无烟房不一致",
+    "dimension": "room_type",
+    "issue_type": "SMOKING_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "订单偏好",
+      "房型",
+      "入住记录"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-09 吸烟/无烟房不一致\n- 维度: room_type\n- 问题类型: SMOKING_MISMATCH\n- 所需证据: 订单偏好、房型、入住记录\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-10",
+    "name": "房型升级/降级不一致",
+    "dimension": "room_type",
+    "issue_type": "ROOM_UPGRADE_DOWNGRADE",
+    "priority": 100,
+    "evidence_required": [
+      "订单",
+      "确认单",
+      "房卡"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-10 房型升级/降级不一致\n- 维度: room_type\n- 问题类型: ROOM_UPGRADE_DOWNGRADE\n- 所需证据: 订单、确认单、房卡\n- 定责边界: 供应商（房态分配）；我司（超售/映射）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-11",
+    "name": "到店无房/超售",
+    "dimension": "room_type",
+    "issue_type": "NO_ROOM_OVERBOOKED",
+    "priority": 100,
+    "evidence_required": [
+      "确认单",
+      "酒店拒单记录",
+      "库存日志"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-11 到店无房/超售\n- 维度: room_type\n- 问题类型: NO_ROOM_OVERBOOKED\n- 所需证据: 确认单、酒店拒单记录、库存日志\n- 定责边界: 供应商（酒店超售）；我司（库存同步）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "R-12",
+    "name": "房型图片与实物不符",
+    "dimension": "room_type",
+    "issue_type": "ROOM_IMAGE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "图片",
+      "入住照片",
+      "素材日志"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## R-12 房型图片与实物不符\n- 维度: room_type\n- 问题类型: ROOM_IMAGE_MISMATCH\n- 所需证据: 图片、入住照片、素材日志\n- 定责边界: 供应商（源图）；渠道（渠道配图）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-01",
+    "name": "窗户类型不一致（内窗/外窗/假窗）",
+    "dimension": "facilities",
+    "issue_type": "WINDOW_TYPE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型设施",
+      "照片",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-01 窗户类型不一致（内窗/外窗/假窗）\n- 维度: facilities\n- 问题类型: WINDOW_TYPE_MISMATCH\n- 所需证据: 房型设施、照片、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-02",
+    "name": "窗户不可开/可开不一致",
+    "dimension": "facilities",
+    "issue_type": "WINDOW_OPENABLE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "设施描述",
+      "照片",
+      "酒店确认"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-02 窗户不可开/可开不一致\n- 维度: facilities\n- 问题类型: WINDOW_OPENABLE_MISMATCH\n- 所需证据: 设施描述、照片、酒店确认\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-03",
+    "name": "床尺寸不一致（1.5m vs 1.8m）",
+    "dimension": "facilities",
+    "issue_type": "BED_SIZE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型信息",
+      "订单",
+      "照片"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-03 床尺寸不一致（1.5m vs 1.8m）\n- 维度: facilities\n- 问题类型: BED_SIZE_MISMATCH\n- 所需证据: 房型信息、订单、照片\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-04",
+    "name": "空调缺失、故障或不制冷",
+    "dimension": "facilities",
+    "issue_type": "AIR_CONDITION_FAULT",
+    "priority": 100,
+    "evidence_required": [
+      "报修记录",
+      "照片",
+      "聊天"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-04 空调缺失、故障或不制冷\n- 维度: facilities\n- 问题类型: AIR_CONDITION_FAULT\n- 所需证据: 报修记录、照片、聊天\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-05",
+    "name": "独立卫浴/共享卫浴不一致",
+    "dimension": "facilities",
+    "issue_type": "BATHROOM_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "房型设施",
+      "照片",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-05 独立卫浴/共享卫浴不一致\n- 维度: facilities\n- 问题类型: BATHROOM_MISMATCH\n- 所需证据: 房型设施、照片、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-06",
+    "name": "热水供应不足或无热水",
+    "dimension": "facilities",
+    "issue_type": "HOT_WATER_ISSUE",
+    "priority": 100,
+    "evidence_required": [
+      "报修记录",
+      "聊天",
+      "照片"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-06 热水供应不足或无热水\n- 维度: facilities\n- 问题类型: HOT_WATER_ISSUE\n- 所需证据: 报修记录、聊天、照片\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-07",
+    "name": "WiFi 缺失、收费或无法连接",
+    "dimension": "facilities",
+    "issue_type": "WIFI_ISSUE",
+    "priority": 100,
+    "evidence_required": [
+      "设施描述",
+      "收费凭证",
+      "聊天"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-07 WiFi 缺失、收费或无法连接\n- 维度: facilities\n- 问题类型: WIFI_ISSUE\n- 所需证据: 设施描述、收费凭证、聊天\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-08",
+    "name": "停车位/停车收费不一致",
+    "dimension": "facilities",
+    "issue_type": "PARKING_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "设施描述",
+      "停车凭证",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-08 停车位/停车收费不一致\n- 维度: facilities\n- 问题类型: PARKING_MISMATCH\n- 所需证据: 设施描述、停车凭证、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-09",
+    "name": "泳池/健身房关闭或不存在",
+    "dimension": "facilities",
+    "issue_type": "POOL_GYM_CLOSED",
+    "priority": 100,
+    "evidence_required": [
+      "设施状态",
+      "公告",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-09 泳池/健身房关闭或不存在\n- 维度: facilities\n- 问题类型: POOL_GYM_CLOSED\n- 所需证据: 设施状态、公告、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-10",
+    "name": "隔音/噪音问题（临街、施工）",
+    "dimension": "facilities",
+    "issue_type": "NOISE_ISSUE",
+    "priority": 100,
+    "evidence_required": [
+      "录音/聊天",
+      "施工公告",
+      "房型描述"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-10 隔音/噪音问题（临街、施工）\n- 维度: facilities\n- 问题类型: NOISE_ISSUE\n- 所需证据: 录音/聊天、施工公告、房型描述\n- 定责边界: 供应商（未披露）；渠道（承诺安静）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-11",
+    "name": "暖气/供暖不足或无暖气",
+    "dimension": "facilities",
+    "issue_type": "HEATING_ISSUE",
+    "priority": 100,
+    "evidence_required": [
+      "报修记录",
+      "温度记录",
+      "聊天"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-11 暖气/供暖不足或无暖气\n- 维度: facilities\n- 问题类型: HEATING_ISSUE\n- 所需证据: 报修记录、温度记录、聊天\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-12",
+    "name": "无障碍设施/婴儿床缺失",
+    "dimension": "facilities",
+    "issue_type": "ACCESSIBLE_CRIB_MISSING",
+    "priority": 100,
+    "evidence_required": [
+      "订单需求",
+      "设施描述",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-12 无障碍设施/婴儿床缺失\n- 维度: facilities\n- 问题类型: ACCESSIBLE_CRIB_MISSING\n- 所需证据: 订单需求、设施描述、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "F-13",
+    "name": "其他设施与页面描述不符（保险箱、冰箱、浴缸等）",
+    "dimension": "facilities",
+    "issue_type": "FACILITY_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "页面",
+      "照片",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## F-13 其他设施与页面描述不符（保险箱、冰箱、浴缸等）\n- 维度: facilities\n- 问题类型: FACILITY_MISMATCH\n- 所需证据: 页面、照片、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-01",
+    "name": "免费早餐包含与否不一致",
+    "dimension": "terms",
+    "issue_type": "BREAKFAST_INCLUDED_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "价格计划",
+      "确认单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-01 免费早餐包含与否不一致\n- 维度: terms\n- 问题类型: BREAKFAST_INCLUDED_MISMATCH\n- 所需证据: 价格计划、确认单、页面\n- 定责边界: 供应商（价格计划错）；渠道（渠道加早餐）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-02",
+    "name": "早餐类型/份数不一致（双早 vs 单早、自助 vs 套餐）",
+    "dimension": "terms",
+    "issue_type": "BREAKFAST_TYPE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "价格计划",
+      "确认单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-02 早餐类型/份数不一致（双早 vs 单早、自助 vs 套餐）\n- 维度: terms\n- 问题类型: BREAKFAST_TYPE_MISMATCH\n- 所需证据: 价格计划、确认单、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-03",
+    "name": "退款规则不一致（可退 vs 不可退）",
+    "dimension": "terms",
+    "issue_type": "REFUND_POLICY_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "价格计划",
+      "取消政策",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-03 退款规则不一致（可退 vs 不可退）\n- 维度: terms\n- 问题类型: REFUND_POLICY_MISMATCH\n- 所需证据: 价格计划、取消政策、页面\n- 定责边界: 供应商（价格计划）；渠道（展示错）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-04",
+    "name": "取消截止时间/时区错误",
+    "dimension": "terms",
+    "issue_type": "CANCEL_DEADLINE_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "政策原文",
+      "时区",
+      "订单时间"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-04 取消截止时间/时区错误\n- 维度: terms\n- 问题类型: CANCEL_DEADLINE_ERROR\n- 所需证据: 政策原文、时区、订单时间\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-05",
+    "name": "担保/预付规则不一致",
+    "dimension": "terms",
+    "issue_type": "PAYMENT_RULE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "支付记录",
+      "价格计划",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-05 担保/预付规则不一致\n- 维度: terms\n- 问题类型: PAYMENT_RULE_MISMATCH\n- 所需证据: 支付记录、价格计划、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-06",
+    "name": "押金/杂费未披露",
+    "dimension": "terms",
+    "issue_type": "DEPOSIT_UNDISCLOSED",
+    "priority": 100,
+    "evidence_required": [
+      "酒店政策",
+      "页面",
+      "付款凭证"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-06 押金/杂费未披露\n- 维度: terms\n- 问题类型: DEPOSIT_UNDISCLOSED\n- 所需证据: 酒店政策、页面、付款凭证\n- 定责边界: 供应商（酒店收取）；渠道（未展示）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-07",
+    "name": "城市税/度假村费未披露",
+    "dimension": "terms",
+    "issue_type": "CITY_TAX_UNDISCLOSED",
+    "priority": 100,
+    "evidence_required": [
+      "政策",
+      "页面",
+      "账单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-07 城市税/度假村费未披露\n- 维度: terms\n- 问题类型: CITY_TAX_UNDISCLOSED\n- 所需证据: 政策、页面、账单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-08",
+    "name": "发票能力不一致（可开/不可开/税率）",
+    "dimension": "terms",
+    "issue_type": "INVOICE_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "酒店政策",
+      "发票",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-08 发票能力不一致（可开/不可开/税率）\n- 维度: terms\n- 问题类型: INVOICE_MISMATCH\n- 所需证据: 酒店政策、发票、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-09",
+    "name": "入住/退房时间不一致",
+    "dimension": "terms",
+    "issue_type": "CHECKIN_CHECKOUT_TIME_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "酒店政策",
+      "确认单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-09 入住/退房时间不一致\n- 维度: terms\n- 问题类型: CHECKIN_CHECKOUT_TIME_MISMATCH\n- 所需证据: 酒店政策、确认单、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-10",
+    "name": "儿童政策不一致（免费年龄、加床）",
+    "dimension": "terms",
+    "issue_type": "CHILD_POLICY_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "政策",
+      "订单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-10 儿童政策不一致（免费年龄、加床）\n- 维度: terms\n- 问题类型: CHILD_POLICY_MISMATCH\n- 所需证据: 政策、订单、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-11",
+    "name": "宠物政策不一致",
+    "dimension": "terms",
+    "issue_type": "PET_POLICY_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "政策",
+      "订单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-11 宠物政策不一致\n- 维度: terms\n- 问题类型: PET_POLICY_MISMATCH\n- 所需证据: 政策、订单、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-12",
+    "name": "加床/早餐附加费未披露",
+    "dimension": "terms",
+    "issue_type": "EXTRA_FEE_UNDISCLOSED",
+    "priority": 100,
+    "evidence_required": [
+      "价格计划",
+      "账单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-12 加床/早餐附加费未披露\n- 维度: terms\n- 问题类型: EXTRA_FEE_UNDISCLOSED\n- 所需证据: 价格计划、账单、页面\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "T-13",
+    "name": "“到店付款”与预付规则不一致",
+    "dimension": "terms",
+    "issue_type": "PAY_AT_HOTEL_MISMATCH",
+    "priority": 100,
+    "evidence_required": [
+      "支付记录",
+      "确认单",
+      "页面"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## T-13 “到店付款”与预付规则不一致\n- 维度: terms\n- 问题类型: PAY_AT_HOTEL_MISMATCH\n- 所需证据: 支付记录、确认单、页面\n- 定责边界: 供应商（价格计划）；渠道（展示）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-01",
+    "name": "供应商确认后拒绝/超售",
+    "dimension": "confirmation",
+    "issue_type": "CONFIRMED_THEN_REJECTED",
+    "priority": 100,
+    "evidence_required": [
+      "确认单",
+      "拒单记录",
+      "库存日志"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-01 供应商确认后拒绝/超售\n- 维度: confirmation\n- 问题类型: CONFIRMED_THEN_REJECTED\n- 所需证据: 确认单、拒单记录、库存日志\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-02",
+    "name": "供应商超时未确认，导致订单取消",
+    "dimension": "confirmation",
+    "issue_type": "CONFIRM_SLA_TIMEOUT",
+    "priority": 100,
+    "evidence_required": [
+      "订单时间",
+      "SLA",
+      "催单记录"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-02 供应商超时未确认，导致订单取消\n- 维度: confirmation\n- 问题类型: CONFIRM_SLA_TIMEOUT\n- 所需证据: 订单时间、SLA、催单记录\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-03",
+    "name": "供应商确认错日期/房型/人数",
+    "dimension": "confirmation",
+    "issue_type": "CONFIRM_CONTENT_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "订单",
+      "确认单",
+      "传输日志"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-03 供应商确认错日期/房型/人数\n- 维度: confirmation\n- 问题类型: CONFIRM_CONTENT_ERROR\n- 所需证据: 订单、确认单、传输日志\n- 定责边界: 供应商（我司传输正确时）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-04",
+    "name": "我司传输错误（编码、映射、日期、人数）",
+    "dimension": "confirmation",
+    "issue_type": "OUR_TRANSFER_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "请求/响应日志",
+      "订单"
+    ],
+    "default_liability": "OURS_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-04 我司传输错误（编码、映射、日期、人数）\n- 维度: confirmation\n- 问题类型: OUR_TRANSFER_ERROR\n- 所需证据: 请求/响应日志、订单\n- 定责边界: 我司\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-05",
+    "name": "渠道传输错误（日期、房型、姓名）",
+    "dimension": "confirmation",
+    "issue_type": "CHANNEL_TRANSFER_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "渠道订单",
+      "我司接收日志"
+    ],
+    "default_liability": "CHANNEL_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-05 渠道传输错误（日期、房型、姓名）\n- 维度: confirmation\n- 问题类型: CHANNEL_TRANSFER_ERROR\n- 所需证据: 渠道订单、我司接收日志\n- 定责边界: 渠道\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-06",
+    "name": "重复订单/幂等失效",
+    "dimension": "confirmation",
+    "issue_type": "DUPLICATE_ORDER",
+    "priority": 100,
+    "evidence_required": [
+      "请求 ID",
+      "日志",
+      "订单"
+    ],
+    "default_liability": "OURS_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-06 重复订单/幂等失效\n- 维度: confirmation\n- 问题类型: DUPLICATE_ORDER\n- 所需证据: 请求 ID、日志、订单\n- 定责边界: 我司（接口重试）；渠道（重复提交）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-07",
+    "name": "客人姓名/证件错误",
+    "dimension": "confirmation",
+    "issue_type": "GUEST_NAME_ERROR",
+    "priority": 100,
+    "evidence_required": [
+      "订单",
+      "证件",
+      "确认单"
+    ],
+    "default_liability": "CHANNEL_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-07 客人姓名/证件错误\n- 维度: confirmation\n- 问题类型: GUEST_NAME_ERROR\n- 所需证据: 订单、证件、确认单\n- 定责边界: 渠道（录入错）；我司（传输错）\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-08",
+    "name": "到店被“走客”/安置他店",
+    "dimension": "confirmation",
+    "issue_type": "GUEST_WALKED",
+    "priority": 100,
+    "evidence_required": [
+      "酒店通知",
+      "安置记录",
+      "确认单"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [
+      {
+        "when": {
+          "firstBadHop": "OURS"
+        },
+        "liability": "OURS_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "CHANNEL"
+        },
+        "liability": "CHANNEL_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "SUPPLIER"
+        },
+        "liability": "SUPPLIER_PRIMARY"
+      },
+      {
+        "when": {
+          "firstBadHop": "NONE"
+        },
+        "liability": "UNDETERMINED"
+      },
+      {
+        "when": {
+          "firstBadHop": "EVIDENCE_GAP"
+        },
+        "liability": "UNDETERMINED"
+      }
+    ],
+    "content_md": "## C-08 到店被“走客”/安置他店\n- 维度: confirmation\n- 问题类型: GUEST_WALKED\n- 所需证据: 酒店通知、安置记录、确认单\n- 定责边界: 供应商\n- 分支裁决: 按证据链路首个出错环节(firstBadHop)定责：我司映射/传输偏离源数据→我司主责；渠道展示偏离下发数据→渠道主责；链路一致但与实际不符→供应商(酒店执行侧)主责；四跳全一致或任一跳证据缺失→无法判定，转人工复核。\n"
+  },
+  {
+    "rule_id": "C-09",
+    "name": "不可抗力（天气、政府、疫情）",
+    "dimension": "confirmation",
+    "issue_type": "FORCE_MAJEURE",
+    "priority": 100,
+    "evidence_required": [
+      "官方通知",
+      "合同条款",
+      "沟通记录"
+    ],
+    "default_liability": "FORCE_MAJEURE",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## C-09 不可抗力（天气、政府、疫情）\n- 维度: confirmation\n- 问题类型: FORCE_MAJEURE\n- 所需证据: 官方通知、合同条款、沟通记录\n- 定责边界: 共责/无责\n"
+  },
+  {
+    "rule_id": "D-01",
+    "name": "供应商推送错误，我司未校验直接下发",
+    "dimension": "data_flow",
+    "issue_type": "SUPPLIER_PUSH_BAD_DATA",
+    "priority": 80,
+    "evidence_required": [
+      "推送日志",
+      "校验记录"
+    ],
+    "default_liability": "SUPPLIER_PRIMARY",
+    "secondary_liability": "OURS_SECONDARY",
+    "branches": [],
+    "content_md": "## D-01 供应商推送错误，我司未校验直接下发\n- 维度: data_flow\n- 问题类型: SUPPLIER_PUSH_BAD_DATA\n- 所需证据: 推送日志、校验记录\n- 定责边界: 供应商主责，我司次责\n"
+  },
+  {
+    "rule_id": "D-02",
+    "name": "我司拉取供应商 API 后映射/字段错误",
+    "dimension": "data_flow",
+    "issue_type": "OUR_MAPPING_ERROR",
+    "priority": 80,
+    "evidence_required": [
+      "API 响应",
+      "映射配置"
+    ],
+    "default_liability": "OURS_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-02 我司拉取供应商 API 后映射/字段错误\n- 维度: data_flow\n- 问题类型: OUR_MAPPING_ERROR\n- 所需证据: API 响应、映射配置\n- 定责边界: 我司\n"
+  },
+  {
+    "rule_id": "D-03",
+    "name": "我司缓存过期/未刷新，继续下发旧数据",
+    "dimension": "data_flow",
+    "issue_type": "OUR_CACHE_STALE",
+    "priority": 80,
+    "evidence_required": [
+      "缓存时间",
+      "源数据时间"
+    ],
+    "default_liability": "OURS_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-03 我司缓存过期/未刷新，继续下发旧数据\n- 维度: data_flow\n- 问题类型: OUR_CACHE_STALE\n- 所需证据: 缓存时间、源数据时间\n- 定责边界: 我司\n"
+  },
+  {
+    "rule_id": "D-04",
+    "name": "我司推送渠道延迟/漏推",
+    "dimension": "data_flow",
+    "issue_type": "OUR_PUSH_DELAY",
+    "priority": 80,
+    "evidence_required": [
+      "推送日志",
+      "SLA"
+    ],
+    "default_liability": "OURS_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-04 我司推送渠道延迟/漏推\n- 维度: data_flow\n- 问题类型: OUR_PUSH_DELAY\n- 所需证据: 推送日志、SLA\n- 定责边界: 我司\n"
+  },
+  {
+    "rule_id": "D-05",
+    "name": "渠道拉取后缓存过期/未刷新",
+    "dimension": "data_flow",
+    "issue_type": "CHANNEL_CACHE_STALE",
+    "priority": 80,
+    "evidence_required": [
+      "拉取时间",
+      "渠道页面"
+    ],
+    "default_liability": "CHANNEL_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-05 渠道拉取后缓存过期/未刷新\n- 维度: data_flow\n- 问题类型: CHANNEL_CACHE_STALE\n- 所需证据: 拉取时间、渠道页面\n- 定责边界: 渠道\n"
+  },
+  {
+    "rule_id": "D-06",
+    "name": "渠道自行修改/美化/遗漏内容",
+    "dimension": "data_flow",
+    "issue_type": "CHANNEL_CONTENT_MODIFIED",
+    "priority": 80,
+    "evidence_required": [
+      "渠道页面",
+      "API 返回",
+      "素材日志"
+    ],
+    "default_liability": "CHANNEL_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-06 渠道自行修改/美化/遗漏内容\n- 维度: data_flow\n- 问题类型: CHANNEL_CONTENT_MODIFIED\n- 所需证据: 渠道页面、API 返回、素材日志\n- 定责边界: 渠道\n"
+  },
+  {
+    "rule_id": "D-07",
+    "name": "渠道展示与 API 返回不一致",
+    "dimension": "data_flow",
+    "issue_type": "CHANNEL_DISPLAY_API_MISMATCH",
+    "priority": 80,
+    "evidence_required": [
+      "页面截图",
+      "API 响应"
+    ],
+    "default_liability": "CHANNEL_PRIMARY",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-07 渠道展示与 API 返回不一致\n- 维度: data_flow\n- 问题类型: CHANNEL_DISPLAY_API_MISMATCH\n- 所需证据: 页面截图、API 响应\n- 定责边界: 渠道\n"
+  },
+  {
+    "rule_id": "D-08",
+    "name": "日志缺失/时间戳矛盾，无法定责",
+    "dimension": "data_flow",
+    "issue_type": "LOG_MISSING_UNDETERMINED",
+    "priority": 80,
+    "evidence_required": [
+      "日志",
+      "截图",
+      "沟通记录"
+    ],
+    "default_liability": "UNDETERMINED",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-08 日志缺失/时间戳矛盾，无法定责\n- 维度: data_flow\n- 问题类型: LOG_MISSING_UNDETERMINED\n- 所需证据: 日志、截图、沟通记录\n- 定责边界: 无法判定/人工\n"
+  },
+  {
+    "rule_id": "D-09",
+    "name": "合同/SLA 对责任有明确约定",
+    "dimension": "data_flow",
+    "issue_type": "CONTRACT_SLA_OVERRIDE",
+    "priority": 1000,
+    "evidence_required": [
+      "合同条款",
+      "SLA"
+    ],
+    "default_liability": "CONTRACT",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-09 合同/SLA 对责任有明确约定\n- 维度: data_flow\n- 问题类型: CONTRACT_SLA_OVERRIDE\n- 所需证据: 合同条款、SLA\n- 定责边界: 按合同\n"
+  },
+  {
+    "rule_id": "D-10",
+    "name": "无特殊约定时，按“源数据—分发—展示”边界定责",
+    "dimension": "data_flow",
+    "issue_type": "DEFAULT_DATA_FLOW_BOUNDARY",
+    "priority": 10,
+    "evidence_required": [
+      "规则库"
+    ],
+    "default_liability": "UNDETERMINED",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-10 无特殊约定时，按“源数据—分发—展示”边界定责\n- 维度: data_flow\n- 问题类型: DEFAULT_DATA_FLOW_BOUNDARY\n- 所需证据: 规则库\n- 定责边界: 默认\n"
+  },
+  {
+    "rule_id": "D-11",
+    "name": "双方都有过错",
+    "dimension": "data_flow",
+    "issue_type": "SHARED_FAULT",
+    "priority": 80,
+    "evidence_required": [
+      "证据链",
+      "时间线"
+    ],
+    "default_liability": "SHARED",
+    "secondary_liability": "NONE",
+    "branches": [],
+    "content_md": "## D-11 双方都有过错\n- 维度: data_flow\n- 问题类型: SHARED_FAULT\n- 所需证据: 证据链、时间线\n- 定责边界: 共责\n"
+  }
+]

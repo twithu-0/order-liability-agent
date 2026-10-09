@@ -5,6 +5,7 @@ import com.twithu.orderliabilityagent.advisor.TokenUsageAdvisor;
 import com.twithu.orderliabilityagent.custom.CustomJdbcChatMemoryRepository;
 import com.twithu.orderliabilityagent.model.dto.ExtractResult;
 import com.twithu.orderliabilityagent.model.dto.PreprocessResult;
+import com.twithu.orderliabilityagent.rag.DocumentLoader;
 import com.twithu.orderliabilityagent.rag.LoggerAdvisor;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
@@ -22,7 +23,7 @@ public class LiabilityAgent {
 
 
     @Resource
-    private ResourcePatternResolver resourcePatternResolver;
+    private DocumentLoader documentLoader;
 
 
     private final ChatClient chatClient;
@@ -50,7 +51,7 @@ public class LiabilityAgent {
     public ExtractResult extract(PreprocessResult preprocessResult, String chatId) {
         ExtractResult result = chatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
-                .system(resourcePatternResolver.getResource("classpath:docs/extractPrompt.txt"))
+                .system(documentLoader.loadResource("classpath:docs/extractPrompt.txt"))
                 .user(promptUserSpec -> promptUserSpec.text(template)
                         .param("userPrompt", preprocessResult.getNormalizedInput())
                         .param("orderNo", preprocessResult.getOrderNoHint())

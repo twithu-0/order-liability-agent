@@ -29,6 +29,12 @@ spring:
       api-key: ${DEEPSEEK_API_KEY}
       chat:
         model: deepseek-flash
+    ollama:
+      # base-url: http://localhost:11434
+      # chat:
+      #   model: gemma3:270m
+      embedding:
+        model: qwen3-embedding:0.6b # 需要启动Ollama才能用，默认访问http://localhost:11434/api/embed
 
 
 
