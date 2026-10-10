@@ -28,11 +28,11 @@ public class RetrievalAdvisorFactory {
                 .documentRetriever(VectorStoreDocumentRetriever.builder()
                         .similarityThreshold(0.50) //相似度阈值 pgVectorStore的距离类型默认为COSINE_DISTANCE，在此规则下相似度=1-距离
                         .filterExpression(expression)
-                        .topK(3) // 返回的文档数量
+                        .topK(20) // 返回的文档数量
                         .vectorStore(vectorStore)
                         .build())
                 .queryAugmenter(ContextualQueryAugmenter.builder()
-                        .allowEmptyContext(false)
+                        .allowEmptyContext(false) // 当检索不到文档时，是否允许正常调用LLM
                         .emptyContextPromptTemplate(EMPTY_CONTEXT_PROMPT_TEMPLATE) // 如果允许上下文为空，设置的回答prompt模版
                         .build())
                 .build();
@@ -41,7 +41,7 @@ public class RetrievalAdvisorFactory {
 
     static PromptTemplate EMPTY_CONTEXT_PROMPT_TEMPLATE = new PromptTemplate("""
             你应该输出下面的内容：
-            你似乎没有输入任何内容，请检查一下哦~
+            没有检索到相关规则，请练习管理员或者换个问题继续问
             """);
 
     public static void SimilaritySearch(VectorStore vectorStore, String query){

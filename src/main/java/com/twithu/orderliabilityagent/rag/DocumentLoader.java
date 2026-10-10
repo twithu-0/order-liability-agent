@@ -6,6 +6,7 @@ import org.springframework.ai.reader.JsonReader;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
+import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -24,14 +25,15 @@ public class DocumentLoader {
         return resourcePatternResolver.getResource(location);
     }
 
-    List<Document> loadRules(){
+    public List<Document> loadRules(){
         List<Document> documents = loadJsonAsDocuments("content_md", "dimension", "rule_id");
         // 给每个chunk设置id，防止重复插入数据库
         List<Document> retList = new ArrayList<>();
         for (Document doc : documents) {
             String id = doc.getMetadata().get("rule_id").toString();
             String uuid = UUID.nameUUIDFromBytes(id.getBytes(StandardCharsets.UTF_8)).toString();//必须设置为uuid
-            retList.add(doc.mutate().id(uuid).build());
+            String contentHash = DigestUtils.md5DigestAsHex(doc.getText().getBytes(StandardCharsets.UTF_8)); // 内容和id幂等性校验
+            retList.add(doc.mutate().id(uuid).metadata("content_hash", contentHash).build());
         }
         return retList;
     }

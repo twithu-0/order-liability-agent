@@ -7,12 +7,14 @@ import com.twithu.orderliabilityagent.model.dto.ExtractResult;
 import com.twithu.orderliabilityagent.model.dto.PreprocessResult;
 import com.twithu.orderliabilityagent.rag.DocumentLoader;
 import com.twithu.orderliabilityagent.rag.LoggerAdvisor;
+import com.twithu.orderliabilityagent.rag.RetrievalAdvisorFactory;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +26,9 @@ public class LiabilityAgent {
 
     @Resource
     private DocumentLoader documentLoader;
+
+    @Resource
+    private PgVectorStore pgVectorStore;
 
 
     private final ChatClient chatClient;
@@ -48,6 +53,7 @@ public class LiabilityAgent {
             orderNo:{orderNo},channelName:{customerName},supplierName:{supplierName}.
             """;
 
+
     public ExtractResult extract(PreprocessResult preprocessResult, String chatId) {
         ExtractResult result = chatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
@@ -63,6 +69,16 @@ public class LiabilityAgent {
                         .useProviderStructuredOutput() // 要求上游强制结构化输出,这里上游DS模型没有实现接口，先不管。
                 );
         return result;
+    }
+
+    public String chatWithRag(String userPrompt, String chatId, String dimension){
+        return chatClient.prompt()
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors( RetrievalAdvisorFactory.createRetrievalAdvisor(pgVectorStore, dimension))
+                .system("从已有的知识文档返回最相关的文档内容")
+                .user(userPrompt)
+                .call()
+                .content();
     }
 
 
