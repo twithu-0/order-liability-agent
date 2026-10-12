@@ -1,5 +1,6 @@
 package com.twithu.orderliabilityagent.rag;
 
+import com.twithu.orderliabilityagent.rag.transform.RuleMetadataEnricher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.JsonReader;
@@ -16,17 +17,20 @@ import java.util.*;
 public class DocumentLoader {
 
     private final ResourcePatternResolver resourcePatternResolver;
+    private final RuleMetadataEnricher ruleMetadataEnricher;
 
-    DocumentLoader(ResourcePatternResolver resourcePatternResolver){
+    DocumentLoader(ResourcePatternResolver resourcePatternResolver, RuleMetadataEnricher ruleMetadataEnricher){
         this.resourcePatternResolver = resourcePatternResolver;
+        this.ruleMetadataEnricher = ruleMetadataEnricher;
     }
 
-    public Resource loadResource(String location){
-        return resourcePatternResolver.getResource(location);
-    }
 
     public List<Document> loadRules(){
-        List<Document> documents = loadJsonAsDocuments("content_md", "dimension", "rule_id");
+        // 结构化字段全量进 metadata：dimension 供检索过滤，priority 供重排，issue_type/evidence_required 供判责与评测
+        List<Document> documents = loadJsonAsDocuments("content_md",
+                "dimension", "rule_id", "issue_type", "priority", "evidence_required");
+        // 领域 Transform：口语别名扩充文本（在计算 content_hash 之前，保证幂等键反映最终入库内容）
+        documents = ruleMetadataEnricher.apply(documents);
         // 给每个chunk设置id，防止重复插入数据库
         List<Document> retList = new ArrayList<>();
         for (Document doc : documents) {
@@ -55,6 +59,10 @@ public class DocumentLoader {
         }
                 , targetKey);
         return jsonReader.get();
+    }
+
+    public Resource loadResource(String location){
+        return resourcePatternResolver.getResource(location);
     }
 
 }

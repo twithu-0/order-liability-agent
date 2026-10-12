@@ -71,10 +71,10 @@ public class LiabilityAgent {
         return result;
     }
 
-    public String chatWithRag(String userPrompt, String chatId, String dimension){
+    public String chatWithRag(String userPrompt, String chatId, String dimension, ChatModel transformChatModel){
         return chatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
-                .advisors( RetrievalAdvisorFactory.createRetrievalAdvisor(pgVectorStore, dimension))
+                .advisors( RetrievalAdvisorFactory.createRetrievalAdvisor(pgVectorStore, dimension, transformChatModel, true))
                 .system("从已有的知识文档返回最相关的文档内容")
                 .user(userPrompt)
                 .call()

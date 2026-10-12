@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -24,7 +25,7 @@ public class VectorStoreManager {
     DocumentLoader documentLoader;
 
     @Bean
-    // @Profile("!test") // 非测试环境激活
+    @Profile("!test") // 非测试环境激活
     public ApplicationRunner ruleDocumentInitializer(PgVectorStore pgVectorStore
             , @Qualifier("pgJdbcTemplate") JdbcTemplate pgJdbcTemplate) {
         return args -> {
@@ -54,17 +55,11 @@ public class VectorStoreManager {
     /** 根据 ruleId 删除向量库规则 */ //TODO 抛到接口层去，设置管理员可调用
     public void deleteVectorStore(PgVectorStore pgVectorStore, List<String> ruleIdList) {
         try {
-            Set<String> uuidSet = new HashSet<>();
-            for (String ruleId : ruleIdList) {
-                String uuid = UUID.nameUUIDFromBytes(ruleId.getBytes(StandardCharsets.UTF_8)).toString();
-                uuidSet.add(uuid);
-            }
+            List<String> uuidList = ruleIdList.stream()
+                    .map(ruleId -> UUID.nameUUIDFromBytes(ruleId.getBytes(StandardCharsets.UTF_8)).toString())
+                    .collect(Collectors.toList());
 
-            Filter.Expression expression = new FilterExpressionBuilder()
-                    .in("id", uuidSet)
-                    .build();
-
-            pgVectorStore.delete(expression);
+            pgVectorStore.delete(uuidList);
         }catch (Exception e){
             log.error("删除向量库规则时出错,ruleIdList:{},{}", ruleIdList, e.getMessage());
         }

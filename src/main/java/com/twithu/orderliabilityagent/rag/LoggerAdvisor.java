@@ -21,7 +21,7 @@ public class LoggerAdvisor implements CallAdvisor, StreamAdvisor {
 
     @Override
     public int getOrder() {
-        return 0;
+        return 100;
     }
 
     private void logRequest(ChatClientRequest request) {
