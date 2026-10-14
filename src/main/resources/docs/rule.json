@@ -2629,7 +2629,7 @@
   },
   {
     "rule_id": "C-08",
-    "name": "到店被“走客”/安置他店",
+    "name": "到店无房 被“走客”/安置他店",
     "dimension": "confirmation",
     "issue_type": "GUEST_WALKED",
     "priority": 100,

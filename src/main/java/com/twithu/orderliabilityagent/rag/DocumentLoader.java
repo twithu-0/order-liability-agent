@@ -26,8 +26,9 @@ public class DocumentLoader {
 
 
     public List<Document> loadRules(){
-        // 结构化字段全量进 metadata：dimension 供检索过滤，priority 供重排，issue_type/evidence_required 供判责与评测
-        List<Document> documents = loadJsonAsDocuments("content_md",
+        // 检索表示与判责表示分离：只嵌入场景描述(name)+口语别名，机器字段进 metadata 不参与向量化；
+        // 规则全文 content_md 留在 MySQL，P7 判责时按 rule_id 回查注入 prompt
+        List<Document> documents = loadJsonAsDocuments("name",
                 "dimension", "rule_id", "issue_type", "priority", "evidence_required");
         // 领域 Transform：口语别名扩充文本（在计算 content_hash 之前，保证幂等键反映最终入库内容）
         documents = ruleMetadataEnricher.apply(documents);

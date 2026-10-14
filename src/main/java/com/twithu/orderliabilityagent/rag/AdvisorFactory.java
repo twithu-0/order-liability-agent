@@ -21,10 +21,8 @@ import java.util.List;
 
 /**
  * RAG（检索增强）Advisor工厂
- * <p>完整 modular RAG 链路：Query Transform（多轮压缩+改写）→ 向量检索（dimension 过滤）
- * → 优先级重排 → 上下文增强。基线重载不带 Query Transform，供召回评测对比。</p>
  */
-public class RetrievalAdvisorFactory {
+public class AdvisorFactory {
 
     /** 候选池 topK：先宽召回，再由重排截断到 5 条；参数待召回评测（Hit@K/MRR）调优 */
     private static final int RETRIEVAL_TOP_K = 10;
@@ -37,39 +35,38 @@ public class RetrievalAdvisorFactory {
             1. 保留投诉核心事实：争议信息（床型/早餐/电话等）、承诺值、实际情况
             2. 补充规则领域的规范术语，如"床型不一致""早餐未提供""酒店电话空号"
             3. 去掉订单号、渠道名、供应商名、情绪化表达等与规则检索无关的信息
-            4. 只输出改写后的查询文本，不要任何解释
+            3. 涉及到“渠道”“供应商”“酒店”等作为主语，应保留主语字段
+            4. 只输出改写后的查询文本，不要任何解释，不要加多余的文本（如原输入只描述了问题，不要自行加“导致下单错误”、“建议xx判定规则”类似字样）
             用户原始查询：{query}
             改写后的查询：
             """);
 
-    /** 基线版：不带 Query Transform，供召回评测对比 */
+    /**
+     * query 压缩对话历史、规范改写用户输入的Advisor
+     * @param chatModel
+     * @return
+     */
+    public static Advisor createRewriteAdvisor(ChatModel chatModel) {
+        return RetrievalAugmentationAdvisor.builder()
+                .queryTransformers(createQueryTransformers(chatModel))
+                .build();
+    }
+
+
+
     public static Advisor createRetrievalAdvisor(VectorStore vectorStore, String dimension) {
-        return createRetrievalAdvisor(vectorStore, dimension,null,  false);
-    }
-
-    /** 完整版：多轮压缩 + 查询改写 + 优先级重排 */
-    public static Advisor createRetrievalAdvisor(VectorStore vectorStore, String dimension, ChatModel chatModel) {
-        return createRetrievalAdvisor(vectorStore, dimension, chatModel, true);
-    }
-
-    public static Advisor createRetrievalAdvisor(VectorStore vectorStore, String dimension,
-                                                 ChatModel chatModel, boolean enableQueryTransform) {
         Filter.Expression expression = new FilterExpressionBuilder()
                 .eq("dimension", dimension)
                 .build();
 
-        RetrievalAugmentationAdvisor.Builder builder = RetrievalAugmentationAdvisor.builder();
-        if (enableQueryTransform && chatModel != null) { //是否开启对话历史压缩和对话改写
-            builder.queryTransformers(createQueryTransformers(chatModel));
-        }
-        return builder
+        return RetrievalAugmentationAdvisor.builder()
                 .documentRetriever(VectorStoreDocumentRetriever.builder()
                         .similarityThreshold(SIMILARITY_THRESHOLD)
                         .filterExpression(expression)
                         .topK(RETRIEVAL_TOP_K)
                         .vectorStore(vectorStore)
                         .build())
-                .documentPostProcessors(new PriorityRerankPostProcessor(3,0.7))// 检索后重排，截断到前3条，相似度占总得分比例的0.7
+                .documentPostProcessors(new PriorityRerankPostProcessor(3, 0.7))// 检索后重排，截断到前3条，相似度占总得分比例的0.7
                 .queryAugmenter(ContextualQueryAugmenter.builder()
                         .allowEmptyContext(false) // 检索不到文档时不允许 LLM 自由发挥
                         .emptyContextPromptTemplate(EMPTY_CONTEXT_PROMPT_TEMPLATE)
@@ -86,6 +83,7 @@ public class RetrievalAdvisorFactory {
     /**
      * 查询侧变换链：多轮历史压缩（空历史短路）→ 检索友好改写。
      * 独立暴露便于单测直接验证变换效果。
+     * 此处的 chatModel 只服务查询侧，与判责模型无关，可传轻量模型降低成本。
      */
     public static List<QueryTransformer> createQueryTransformers(ChatModel chatModel) {
         ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);

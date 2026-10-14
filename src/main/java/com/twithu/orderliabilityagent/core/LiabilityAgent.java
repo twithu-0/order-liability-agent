@@ -7,7 +7,7 @@ import com.twithu.orderliabilityagent.model.dto.ExtractResult;
 import com.twithu.orderliabilityagent.model.dto.PreprocessResult;
 import com.twithu.orderliabilityagent.rag.DocumentLoader;
 import com.twithu.orderliabilityagent.rag.LoggerAdvisor;
-import com.twithu.orderliabilityagent.rag.RetrievalAdvisorFactory;
+import com.twithu.orderliabilityagent.rag.AdvisorFactory;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -15,7 +15,6 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
-import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
 
 import static com.twithu.orderliabilityagent.custom.CustomJdbcChatMemoryRepository.MAX_MESSAGE;
@@ -30,10 +29,14 @@ public class LiabilityAgent {
     @Resource
     private PgVectorStore pgVectorStore;
 
+    private final ChatModel ollamaChatModel;
 
+    /** 重度模型  */
     private final ChatClient chatClient;
+    /** 轻量模型，用于压缩历史对话、改写中文  */
+    private final ChatClient lightChatClient;
 
-    public LiabilityAgent(ChatModel deepSeekChatModel, CustomJdbcChatMemoryRepository customJdbcChatMemoryRepository) {
+    public LiabilityAgent(ChatModel deepSeekChatModel, ChatModel ollamaChatModel,CustomJdbcChatMemoryRepository customJdbcChatMemoryRepository) {
         ChatMemory chatMemory = MessageWindowChatMemory.builder()
                 .chatMemoryRepository(customJdbcChatMemoryRepository).maxMessages(MAX_MESSAGE).build();
         chatClient = ChatClient.builder(deepSeekChatModel)
@@ -44,6 +47,15 @@ public class LiabilityAgent {
                         , MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .build();
+
+        lightChatClient = ChatClient.builder(ollamaChatModel)
+                .defaultAdvisors(
+                        new LoggerAdvisor()
+                        , new TokenUsageAdvisor()
+                        , MessageChatMemoryAdvisor.builder(chatMemory).build()
+                )
+                .build();
+        this.ollamaChatModel = ollamaChatModel;
     }
 
     /** 结构化输出template */
@@ -71,12 +83,20 @@ public class LiabilityAgent {
         return result;
     }
 
-    public String chatWithRag(String userPrompt, String chatId, String dimension, ChatModel transformChatModel){
+    public String chatWithRag(String userPrompt, String chatId, String dimension){
         return chatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
-                .advisors( RetrievalAdvisorFactory.createRetrievalAdvisor(pgVectorStore, dimension, transformChatModel, true))
+                .advisors( AdvisorFactory.createRetrievalAdvisor(pgVectorStore, dimension))
                 .system("从已有的知识文档返回最相关的文档内容")
                 .user(userPrompt)
+                .call()
+                .content();
+    }
+
+    public String CompressRewriteUserPrompt(String chatId) {
+        return lightChatClient.prompt()
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors(AdvisorFactory.createRewriteAdvisor(ollamaChatModel))
                 .call()
                 .content();
     }
@@ -99,9 +119,10 @@ public class LiabilityAgent {
     public void chatOutputStructure(String prompt, String chatId){
         Action res = chatClient.prompt(prompt)
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+                .system("你需要从用户输入中抽取关键信息，并用结构化json输出。当相关信息不存在时，设置为null返回，不要自己编造数据")
                 .call()
                 .entity(Action.class
-                        // , spec -> spec.validateSchema() //保证输出符合规则，不失败
+                        // , spec -> spec.validateSchema() // 失败带错误反馈重试，默认最多 3 次
                                 // .useProviderStructuredOutput() // 要求上游强制结构化输出
                 );
         System.out.println(res);
