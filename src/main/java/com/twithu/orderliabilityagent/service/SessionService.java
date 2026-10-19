@@ -36,6 +36,15 @@ public interface SessionService {
                        BigDecimal costEstimate, Integer latencyMs);
 
     /**
+     * 回写判责结论：P8 守卫通过后调用，落面向用户的 result 与判责依据 reason。
+     *
+     * @param sessionId 会话 id
+     * @param result    面向用户的最终结论
+     * @param reason    判责依据
+     */
+    void saveJudgment(Long sessionId, String result, String reason);
+
+    /**
      * 标记会话失败：PENDING/RUNNING → FAILED。
      * 幂等：已是 FAILED 时直接返回。
      *

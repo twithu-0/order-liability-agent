@@ -54,11 +54,17 @@ public class Session implements Serializable  {
     /** 使用的模型 */
     private String modelName;
 
-    /** 消耗 token 总数；未统计时为 null，不用基本类型避免写出 0 */
+    /** 消耗 token 总数；会话完成时由编排器汇总 need_token_record=1 的 LLM 步骤回写，null 表示未统计（历史数据/失败会话） */
     private Long totalTokens;
 
     /** 总耗时（毫秒） */
     private Integer timeCost;
+
+    /** 最终判责结论（面向用户），P8 守卫通过后回写 */
+    private String result;
+
+    /** 判责原因（LLM reason，内部依据），P8 守卫通过后回写 */
+    private String reason;
 
     /** 备注 */
     private String remark;

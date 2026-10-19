@@ -35,6 +35,11 @@ spring:
       #   model: gemma3:270m
       embedding:
         model: qwen3-embedding:0.6b # 需要启动Ollama才能用，默认访问http://localhost:11434/api/embed
+        keep-alive: 60m
+      chat:
+        model: qwen3:4b-instruct
+        keep-alive: 60m
+        num-batch:
 
 
 

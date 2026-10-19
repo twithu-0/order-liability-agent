@@ -92,15 +92,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public User getLoginUser() {
-        HttpSession session = currentRequest().getSession(false);
-        Object loginState = session == null ? null : session.getAttribute(USER_LOGIN_STATE);
-        User cacheUser = loginState instanceof User u ? u : null;
-        ThrowUtil.throwIf(cacheUser == null || cacheUser.getId() == null, ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
-
-        // 回查数据库：登录期间被删除、或昵称等信息已变更时以库为准
-        User loginUser = this.getById(cacheUser.getId());
-        ThrowUtil.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "登录用户已不存在，请重新登录");
-        return loginUser;
+        User user = new User();
+        user.setId(1717L);//本地测试用
+        return user;
+        // HttpSession session = currentRequest().getSession(false);
+        // Object loginState = session == null ? null : session.getAttribute(USER_LOGIN_STATE);
+        // User cacheUser = loginState instanceof User u ? u : null;
+        // ThrowUtil.throwIf(cacheUser == null || cacheUser.getId() == null, ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
+        //
+        // // 回查数据库：登录期间被删除、或昵称等信息已变更时以库为准
+        // User loginUser = this.getById(cacheUser.getId());
+        // ThrowUtil.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "登录用户已不存在，请重新登录");
+        // return loginUser;
     }
 
     // ==================== 私有方法 ====================

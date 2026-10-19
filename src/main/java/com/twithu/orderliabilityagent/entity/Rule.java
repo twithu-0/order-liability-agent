@@ -64,9 +64,6 @@ public class Rule implements Serializable {
     /** 规则全文（Markdown），用于 RAG 切分与向量化 */
     private String contentMd;
 
-    /** 备注 */
-    private String remark;
-
     /** 状态：1 启用 / 0 停用 */
     private Integer status;
 

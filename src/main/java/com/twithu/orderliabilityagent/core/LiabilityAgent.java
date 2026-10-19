@@ -3,19 +3,34 @@ package com.twithu.orderliabilityagent.core;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.twithu.orderliabilityagent.advisor.TokenUsageAdvisor;
 import com.twithu.orderliabilityagent.custom.CustomJdbcChatMemoryRepository;
+import com.twithu.orderliabilityagent.entity.Rule;
 import com.twithu.orderliabilityagent.model.dto.ExtractResult;
+import com.twithu.orderliabilityagent.model.dto.FieldDiff;
+import com.twithu.orderliabilityagent.model.dto.JudgmentResult;
 import com.twithu.orderliabilityagent.model.dto.PreprocessResult;
 import com.twithu.orderliabilityagent.rag.DocumentLoader;
 import com.twithu.orderliabilityagent.rag.LoggerAdvisor;
 import com.twithu.orderliabilityagent.rag.AdvisorFactory;
+import com.twithu.orderliabilityagent.rag.postretrieval.PriorityRerankPostProcessor;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.ResponseEntity;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.rag.Query;
+import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.twithu.orderliabilityagent.custom.CustomJdbcChatMemoryRepository.MAX_MESSAGE;
 
@@ -31,13 +46,18 @@ public class LiabilityAgent {
 
     private final ChatModel ollamaChatModel;
 
+    private final ChatModel deepSeekChatModel;
+
+    private final ChatMemory chatMemory;
+
     /** 重度模型  */
     private final ChatClient chatClient;
     /** 轻量模型，用于压缩历史对话、改写中文  */
     private final ChatClient lightChatClient;
 
     public LiabilityAgent(ChatModel deepSeekChatModel, ChatModel ollamaChatModel,CustomJdbcChatMemoryRepository customJdbcChatMemoryRepository) {
-        ChatMemory chatMemory = MessageWindowChatMemory.builder()
+        this.deepSeekChatModel = deepSeekChatModel;
+        this.chatMemory = MessageWindowChatMemory.builder()
                 .chatMemoryRepository(customJdbcChatMemoryRepository).maxMessages(MAX_MESSAGE).build();
         chatClient = ChatClient.builder(deepSeekChatModel)
                 // .defaultSystem()
@@ -58,6 +78,70 @@ public class LiabilityAgent {
         this.ollamaChatModel = ollamaChatModel;
     }
 
+    /**
+     * P6 前置：查询变换（多轮历史压缩 + 检索友好改写）。
+     * 模型分级：查询侧理想挂轻量模型，当前本地 3b 改写不达标（评测已否决），暂用 DeepSeek；
+     * 换 qwen3:4b-instruct 等更强本地模型时只需替换 createQueryTransformers 的入参。
+     */
+    public String transformQuery(String userPrompt, String chatId) {
+        Query query = Query.builder()
+                .text(userPrompt)
+                .history(chatMemory.get(chatId))
+                .build();
+        for (QueryTransformer transformer : AdvisorFactory.createQueryTransformers(deepSeekChatModel)) {
+            query = transformer.transform(query);
+        }
+        return query.text();
+    }
+
+    /**
+     * P6 纯检索：宽召回 + 优先级重排，零 LLM 调用。
+     * dimension 为空时不做维度过滤（兜底，正常应由 P2 抽取给出）。
+     */
+    public List<Document> retrieveRules(String query, String dimension) {
+        SearchRequest.Builder builder = SearchRequest.builder()
+                .query(query)
+                .topK(5)
+                .similarityThreshold(0.60);
+        if (dimension != null && !dimension.isEmpty()) {
+            builder.filterExpression(new FilterExpressionBuilder().eq("dimension", dimension).build());
+        }
+        List<Document> docs = pgVectorStore.similaritySearch(builder.build());
+        return new PriorityRerankPostProcessor(3, 0.7).process(new Query(query), docs);
+    }
+
+    /** 判责用户消息模板：事实 + 证据比对 + 候选规则全文 */
+    private final String judgeTemplate = """
+            complaint: {complaint}
+            diffList: {diffList}
+            rules:
+            {rules}
+            """;
+
+    /**
+     * P7 判责：事实 + FieldDiff + 候选规则全文（含分支裁决）→ 结构化判决。
+     * 全流程最后一次 LLM 调用；ruleId 合法性由 P8 守卫校验。
+     * 返回 ResponseEntity：entity 是判决结果，response 携带 usage 元数据，供编排器落 token 消耗。
+     */
+    public ResponseEntity<ChatResponse, JudgmentResult> judge(String complaint, List<FieldDiff> diffList, List<Rule> rules, String chatId) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        String diffJsonStr = objectMapper.writeValueAsString(diffList);
+        String complaintJsonStr = objectMapper.writeValueAsString(complaint);
+        String ruleText = rules.stream()
+                .map(r -> r.getRuleId() + " " + r.getName() + "\n" + r.getContentMd()
+                        + "\n分支裁决: " + r.getBranchesJson())
+                .collect(Collectors.joining("\n---\n"));
+        return chatClient.prompt()
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+                .system(documentLoader.loadResource("classpath:prompt/judgePrompt.txt"))
+                .user(promptUserSpec -> promptUserSpec.text(judgeTemplate)
+                        .param("complaint", complaintJsonStr)
+                        .param("diffList", diffJsonStr)
+                        .param("rules", ruleText))
+                .call()
+                .responseEntity(JudgmentResult.class, spec -> spec.validateSchema());
+    }
+
     /** 结构化输出template */
     private final String template = """
             originalUserPrompt:{userPrompt}.
@@ -66,21 +150,24 @@ public class LiabilityAgent {
             """;
 
 
-    public ExtractResult extract(PreprocessResult preprocessResult, String chatId) {
-        ExtractResult result = chatClient.prompt()
+    /**
+     * P2 结构化抽取。返回 ResponseEntity：entity 是抽取结果，response 携带 usage 元数据，
+     * 供编排器落 RunTrace 的 token 消耗（与 TokenUsageAdvisor 日志同源）。
+     */
+    public ResponseEntity<ChatResponse, ExtractResult> extract(PreprocessResult preprocessResult, String chatId) {
+        return chatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
-                .system(documentLoader.loadResource("classpath:docs/extractPrompt.txt"))
+                .system(documentLoader.loadResource("classpath:prompt/extractPrompt.txt"))
                 .user(promptUserSpec -> promptUserSpec.text(template)
                         .param("userPrompt", preprocessResult.getNormalizedInput())
                         .param("orderNo", preprocessResult.getOrderNoHint())
                         .param("customerName", preprocessResult.getCustomerHint())
                         .param("supplierName", preprocessResult.getSupplierHint()))
                 .call()
-                .entity(ExtractResult.class
+                .responseEntity(ExtractResult.class
                         , spec -> spec.validateSchema() //失败带错误反馈重试，默认最多 3 次
                         .useProviderStructuredOutput() // 要求上游强制结构化输出,这里上游DS模型没有实现接口，先不管。
                 );
-        return result;
     }
 
     public String chatWithRag(String userPrompt, String chatId, String dimension){

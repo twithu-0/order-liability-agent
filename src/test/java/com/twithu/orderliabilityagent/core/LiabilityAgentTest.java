@@ -2,7 +2,7 @@ package com.twithu.orderliabilityagent.core;
 
 import cn.hutool.core.util.RandomUtil;
 import com.twithu.orderliabilityagent.MyTest;
-import com.twithu.orderliabilityagent.rag.RetrievalAdvisorFactory;
+import com.twithu.orderliabilityagent.rag.AdvisorFactory;
 import com.twithu.orderliabilityagent.rag.preretrieval.HistoryCompressionTransformer;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
@@ -26,13 +26,14 @@ class LiabilityAgentTest {
     @Resource
     ChatModel deepSeekChatModel;
 
+    @Resource
+    ChatModel ollamaChatModel;
+
     @Test
     void chatClient() {
         String chatId = "chat" + RandomUtil.randomNumbers(4);
-        // liabilityAgent.chat("你好,我叫小A","abc");
-        // liabilityAgent.chat("上一个问题里我是谁？","abc");
-        liabilityAgent.chatOutputStructure("小明很累，明天要去公园休息",chatId);
-        liabilityAgent.chatOutputStructure("妈妈今天在家做饭",chatId);
+        liabilityAgent.chatOutputStructure("小明今天想休息",chatId);
+        // liabilityAgent.chatOutputStructure("妈妈今天在家做饭",chatId);
     }
 
     @Test
@@ -40,9 +41,9 @@ class LiabilityAgentTest {
         String chatId = "chat" + RandomUtil.randomNumbers(4);
         String prompt = "你知道酒店在哪儿吗啊啊啊啊";
         String dimension = "hotel";
-        String s = liabilityAgent.chatWithRag(prompt, chatId, dimension,deepSeekChatModel);
+        String s = liabilityAgent.chatWithRag(prompt, chatId, dimension);
         System.out.println(s);
-        System.out.println(liabilityAgent.chatWithRag("我找不到酒店在哪儿，好烦呐", chatId, dimension,deepSeekChatModel));
+        System.out.println(liabilityAgent.chatWithRag("我找不到酒店在哪儿，好烦呐", chatId, dimension));
     }
 
     /**
@@ -50,7 +51,7 @@ class LiabilityAgentTest {
      */
     @Test
     void queryTransformWithHistory() {
-        List<QueryTransformer> transformers = RetrievalAdvisorFactory.createQueryTransformers(deepSeekChatModel);
+        List<QueryTransformer> transformers = AdvisorFactory.createQueryTransformers(ollamaChatModel);
         QueryTransformer compression = transformers.get(0);
         QueryTransformer rewrite = transformers.get(1);
 
@@ -72,7 +73,7 @@ class LiabilityAgentTest {
 
     @Test
     void compressionShortCircuitOnEmptyHistory() {
-        HistoryCompressionTransformer compression = (HistoryCompressionTransformer) RetrievalAdvisorFactory.createQueryTransformers(deepSeekChatModel).get(0);
+        HistoryCompressionTransformer compression = (HistoryCompressionTransformer) AdvisorFactory.createQueryTransformers(deepSeekChatModel).get(0);
         Query query = Query.builder().text("酒店电话是空号").build();
         assertSame(query, compression.transform(query));
     }
@@ -81,6 +82,6 @@ class LiabilityAgentTest {
     PgVectorStore pgVectorStore;
     @Test
     void similaritySearch() {
-        RetrievalAdvisorFactory.SimilaritySearch(pgVectorStore, "我找不到酒店在哪儿，好烦呐");
+        AdvisorFactory.SimilaritySearch(pgVectorStore, "我找不到酒店在哪儿，好烦呐");
     }
 }

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -77,6 +78,23 @@ class EvidenceComparatorTest {
         OrderEvidence e = withActual("MT20000003", "bedType", " 大床 ");
         assertEquals(EvidenceComparator.HOP_NONE,
                 EvidenceComparator.diff("bedType", e).firstBadHop());
+    }
+
+    @Test
+    void aggregateHopPrefersEarliestError() {
+        FieldDiff channel = new FieldDiff("bedType", "大床", "大床", "双床", "双床", EvidenceComparator.HOP_CHANNEL);
+        FieldDiff ours = new FieldDiff("breakfast", "含早", "无早", "无早", "无早餐", EvidenceComparator.HOP_OURS);
+        assertEquals(EvidenceComparator.HOP_OURS, EvidenceComparator.aggregateHop(List.of(channel, ours)));
+        assertEquals(EvidenceComparator.HOP_CHANNEL, EvidenceComparator.aggregateHop(List.of(channel)));
+    }
+
+    @Test
+    void aggregateHopGapBeatsNoneAndEmptyIsGap() {
+        FieldDiff none = new FieldDiff("bedType", "大床", "大床", "大床", "大床", EvidenceComparator.HOP_NONE);
+        FieldDiff gap = new FieldDiff("breakfast", null, "含早", "含早", "无早餐", EvidenceComparator.HOP_EVIDENCE_GAP);
+        assertEquals(EvidenceComparator.HOP_EVIDENCE_GAP, EvidenceComparator.aggregateHop(List.of(none, gap)));
+        assertEquals(EvidenceComparator.HOP_NONE, EvidenceComparator.aggregateHop(List.of(none)));
+        assertEquals(EvidenceComparator.HOP_EVIDENCE_GAP, EvidenceComparator.aggregateHop(List.of()));
     }
 
     /** 模拟编排器行为：用本次投诉抽取的 actualValue 覆盖快照中的客人实际值 */

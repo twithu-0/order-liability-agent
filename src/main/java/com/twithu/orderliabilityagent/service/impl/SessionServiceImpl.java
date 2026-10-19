@@ -84,6 +84,14 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, Session> impl
     }
 
     @Override
+    public void saveJudgment(Long sessionId, String result, String reason) {
+        Session session = getById(sessionId);
+        session.setResult(result);
+        session.setReason(reason);
+        sessionMapper.updateById(session);
+    }
+
+    @Override
     public void markFailed(Long sessionId, String errorMessage) {
         Session session = getById(sessionId);
         // 幂等：已失败则跳过

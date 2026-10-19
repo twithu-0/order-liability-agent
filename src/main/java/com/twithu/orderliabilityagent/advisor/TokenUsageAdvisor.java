@@ -33,7 +33,6 @@ public class TokenUsageAdvisor implements CallAdvisor, StreamAdvisor {
 
     @Override
     public int getOrder() {
-        // 放在链路上层，响应阶段最后执行，保证 Memory / RAG 补进上下文后才统计
         return Integer.MIN_VALUE + 100;
     }
 

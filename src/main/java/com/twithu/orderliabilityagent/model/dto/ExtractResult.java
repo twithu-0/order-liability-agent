@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 将用户问题转换为实体类，方便后续调用LLM判责
  */
@@ -28,17 +30,17 @@ public class ExtractResult {
     @JsonProperty("phone")
     private String phone;
 
-    /** 争议字段，取值为提示词中约定的 camelCase 字段键，如 bedType / hotelName / breakfast */
-    @JsonProperty("disputedField")
-    private String disputedField;
+    /** 争议字段列表，最多 2 个且同维度，取值为提示词中约定的 camelCase 字段键，如 bedType / hotelName / breakfast */
+    @JsonProperty("disputedFieldList")
+    private List<String> disputedFieldList;
 
-    /** 客人声称的承诺值（页面/订单 promised），可为 null，后续从渠道展示快照补齐 */
+    /** 承诺值列表，与 disputedFieldList 按位对齐（编排器归一化保证），元素可为 null，后续从渠道展示快照补齐 */
     @JsonProperty("promisedValue")
-    private String promisedValue;
+    private List<String> promisedValueList;
 
-    /** 客人遇到的实际情况，判责比对的必需输入 */
+    /** 实际情况列表，与 disputedFieldList 按位对齐，判责比对的必需输入 */
     @JsonProperty("actualValue")
-    private String actualValue;
+    private List<String> actualValueList;
 
     /** 投诉一句话摘要，供判责 LLM 与追问话术使用 */
     @JsonProperty("complaint")

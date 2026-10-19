@@ -10,12 +10,12 @@
 2. orderNo：订单号，MT开头+8位数字；输入中已给出 hint 时优先采用 hint
 3. channelName / supplierName：渠道名 / 供应商名，输入中已给出 hint 时优先采用 hint
 4. hotelName / hotelAddress / phone：酒店名称 / 地址 / 电话，未提及填 null
-5. disputedField：争议字段键，必须从下方词表选取最贴切的一个；无法判断具体争议点时填 null
-6. promisedValue：客人声称的承诺值（页面/订单/确认单上写的），未提及填 null，不要编造
-7. actualValue：客人实际遇到的情况，尽量归一化为短值（如"双床""无早餐""空号"）；未提及填 null
+5. disputedFieldList：争议字段键数组，必须从下方词表选取最贴切的，最多 2 个元素；两个争议点应属于同一 dimension，跨维度时只保留最主要的一个；无法判断具体争议点时填 null
+6. promisedValue：客人声称的承诺值数组（页面/订单/确认单上写的），与 disputedFieldList 按位一一对应，未提及的元素填 null，不要编造
+7. actualValue：客人实际遇到的情况数组，与 disputedFieldList 按位一一对应，尽量归一化为短值（如"双床""无早餐""空号"）；未提及的元素填 null
 8. complaint：投诉一句话摘要
 
-disputedField 词表（camelCase）：
+disputedFieldList 词表（camelCase）：
 - hotel 维度：hotelName, hotelAddress, hotelPhone, hotelCity, hotelStar, hotelBrand, hotelStatus, hotelImage, checkInGuide, hotelMapping
 - room_type 维度：roomTypeName, bedType, bedCount, bedSize, roomArea, floor, windowType, view, occupancy, smoking, roomUpgrade, roomAvailability, roomImage
 - facilities 维度：windowOpen, bathroom, airCondition, hotWater, wifi, parking, pool, gym, noise, heating, accessible, extraFacility
@@ -25,5 +25,6 @@ disputedField 词表（camelCase）：
 要求：
 1. 所有字段缺失时填 null，禁止推测或编造用户未提供的信息
 2. promisedValue 与 actualValue 只保留争议点的值，不要整句复制
-3. 用户只说"有问题/不一致"但没说具体差异时，disputedField 与 actualValue 填 null
-4. 严格输出单个 JSON 对象，字段名与上述完全一致
+3. 用户只说"有问题/不一致"但没说具体差异时，disputedFieldList 与 actualValue 填 null
+4. disputedFieldList / promisedValue / actualValue 一律输出 JSON 数组，单个争议点也要用数组（如 ["bedType"]、["大床"]、["双床"]），三个数组长度必须相等
+5. 严格输出单个 JSON 对象，字段名与上述完全一致
