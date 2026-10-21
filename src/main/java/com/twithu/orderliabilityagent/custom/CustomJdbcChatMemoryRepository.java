@@ -37,14 +37,14 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
 
     @Override
     public List<String> findConversationIds() {
-        return mysqlJdbcTemplate.query("select distinct session_no from t_chat_memory"
+        return mysqlJdbcTemplate.query("select distinct chat_id from t_chat_memory"
                 ,(rs, rowNum) -> Objects.requireNonNull(rs.getString(1)));
     }
 
     @Override
     public List<Message> findByConversationId(String conversationId) {
 
-        List<ChatMemory> memoryList = chatMemoryMapper.selectList(new QueryWrapper<ChatMemory>().eq("session_no", conversationId));
+        List<ChatMemory> memoryList = chatMemoryMapper.selectList(new QueryWrapper<ChatMemory>().eq("chat_id", conversationId));
         // 对话顺序 新->旧
         memoryList.sort(Comparator.comparingInt(ChatMemory::getSequenceId).reversed());
 
@@ -86,7 +86,7 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
                         && !(m instanceof AssistantMessage am && am.hasToolCalls()))
                 .toList();
         if (persistableMessages.size() < messages.size()) {
-            log.warn("CustomJdbcChatMemoryRepository 已过滤掉工具调用信息, session_no: {}", conversationId);
+            log.warn("CustomJdbcChatMemoryRepository 已过滤掉工具调用信息, chat_id: {}", conversationId);
         }
 
         // 基于过滤后的可持久化消息，挑出本轮尚未入库的新消息（见 METADATA_KEY 隐含契约）
@@ -112,7 +112,7 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
         }
         mysqlJdbcTemplate.batchUpdate(
                 "INSERT INTO t_chat_memory " +
-                        "(session_no, content, type, create_time, sequence_id) " +
+                        "(chat_id, content, type, create_time, sequence_id) " +
                         "VALUES (?, ?, ?, now(), ?)",
                 batchArgs
         );
@@ -124,7 +124,7 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
      */
     private int nextSequenceId(String conversationId) {
         Integer max = mysqlJdbcTemplate.query(
-                "SELECT COALESCE(MAX(sequence_id), 0) FROM t_chat_memory WHERE session_no = ?",
+                "SELECT COALESCE(MAX(sequence_id), 0) FROM t_chat_memory WHERE chat_id = ?",
                 rs -> rs.next() ? rs.getInt(1) : 0,
                 conversationId);
         return (max == null ? 0 : max) + 1;
@@ -133,7 +133,7 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
     @Override
     public void deleteByConversationId(String conversationId) {
         // 不处理，采取追加模式
-        // mysqlJdbcTemplate.update("DELETE FROM t_session WHERE session_no = ?", conversationId);
+        // mysqlJdbcTemplate.update("DELETE FROM t_chat_memory WHERE chat_id = ?", conversationId);
     }
 
 }

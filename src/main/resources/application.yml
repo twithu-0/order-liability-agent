@@ -8,18 +8,18 @@ spring:
     active: local
   application:
     name: order-liability-agent
+  mvc:
+    async:
+      # SSE 流式响应走 Servlet 异步，超时须覆盖 P1-P8 同步耗时 + P9 表达层耗时
+      request-timeout: 180000
   datasource:
     # mysql配置  这里因为mysql和PGsql配置项同名了，冲突，所以手动配置
     mysql:
       driver-class-name: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://127.0.0.1:3306/order_liability_agent?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-      username: root
-      password: root
     #PGSql设置 [已在local配置文件设置，这里脱敏处理]
     pgsql:
       url: jdbc:postgresql://xxxx:5432/ai_agent
-      username: postgres
-      password: postgres
   config:
     # 关键：显式导入 .env 文件，并告诉 Spring 按 properties 格式解析它
     import: optional:file:.env[.properties]

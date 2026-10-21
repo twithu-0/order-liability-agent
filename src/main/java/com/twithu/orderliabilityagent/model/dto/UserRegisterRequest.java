@@ -16,9 +16,9 @@ public class UserRegisterRequest {
     @Pattern(regexp = "^[A-Za-z0-9_]{4,25}$", message = "账号只能包含字母、数字、下划线，长度 4~25")
     private String userAccount;
 
-    /** 密码：8~20 位 */
+    /** 密码：4~20 位 */
     @NotBlank(message = "密码不能为空")
-    @Size(min = 8, max = 20, message = "密码长度需在 8~20 位之间")
+    @Size(min = 4, max = 20, message = "密码长度需在 4~20 位之间")
     private String userPassword;
 
     /** 确认密码：必须与密码一致 */

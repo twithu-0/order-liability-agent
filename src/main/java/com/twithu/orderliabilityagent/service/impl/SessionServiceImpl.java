@@ -1,6 +1,5 @@
 package com.twithu.orderliabilityagent.service.impl;
 
-import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.twithu.orderliabilityagent.common.exception.ErrorCode;
 import com.twithu.orderliabilityagent.common.exception.ThrowUtil;
@@ -35,15 +34,15 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, Session> impl
     // ==================== 生命周期 ====================
 
     @Override
-    public Session createSession(Long userId, String userInput) {
+    public Session createSession(Long userId, String chatId, String userInput) {
         ThrowUtil.throwIf(userInput == null || userInput.isBlank(),
                 ErrorCode.PARAMS_ERROR, "客服输入不能为空");
-        // 全局唯一的对话编号
-        String sessionId = "session_" + userId + RandomUtil.randomString(3);
+        ThrowUtil.throwIf(chatId == null || chatId.isBlank(),
+                ErrorCode.PARAMS_ERROR, "chatId 不能为空");
         Session session = Session.builder()
                 .content(userInput)
                 .userId(userId)
-                .sessionNo(sessionId)
+                .chatId(chatId)
                 .status(SessionStatus.PENDING.getCode())
                 .build();
         sessionMapper.insert(session);
@@ -88,6 +87,17 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, Session> impl
         Session session = getById(sessionId);
         session.setResult(result);
         session.setReason(reason);
+        sessionMapper.updateById(session);
+    }
+
+    @Override
+    public void appendTokens(Long sessionId, long extraTokens) {
+        if (extraTokens <= 0) {
+            return;
+        }
+        Session session = getById(sessionId);
+        long base = session.getTotalTokens() == null ? 0L : session.getTotalTokens();
+        session.setTotalTokens(base + extraTokens);
         sessionMapper.updateById(session);
     }
 

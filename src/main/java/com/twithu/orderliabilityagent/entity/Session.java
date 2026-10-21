@@ -28,8 +28,11 @@ public class Session implements Serializable  {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 对话编号 */
-    private String sessionNo;
+    /**
+     * 对话页全局 id。同一对话的多轮判责共享一个 chatId，单轮由自增主键 id 区分；
+     * 与 t_chat_memory.chat_id（Spring AI conversationId）一致，据此串联展示历史与 LLM 记忆。
+     */
+    private String chatId;
 
     /** 订单编号 */
     private String orderNo;

@@ -59,7 +59,7 @@ public class LiabilityOrchestrator {
     public BaseResponse<String> execute(String userPrompt, String chatId){
         User user = userService.getLoginUser();
         // 会话记录入库
-        Session session = sessionService.createSession(user.getId(), userPrompt);
+        Session session = sessionService.createSession(user.getId(), chatId, userPrompt);
         sessionService.markRunning(session.getId());
         long start = System.currentTimeMillis();
 
@@ -150,7 +150,7 @@ public class LiabilityOrchestrator {
                     .in(Rule::getRuleId, ruleIds)
                     .eq(Rule::getStatus, 1));
 
-            // P7 LLM 判责：事实 + diff + 规则全文 → 结构化判决（全流程最后一次 LLM 调用）
+            // P7 LLM 判责：事实 + diff + 规则全文 → 结构化判决（同步主流程最后一次 LLM 调用；流式路径另有 P9 表达）
             long t7 = System.currentTimeMillis();
             ResponseEntity<ChatResponse, JudgmentResult> judgeResponse = agent.judge(extractResult.getComplaint(), diffList, rules, chatId);
             JudgmentResult judgment = judgeResponse.entity();
@@ -177,9 +177,12 @@ public class LiabilityOrchestrator {
             result.put("response", resp);
             return complete(session, start, resp);
         } catch (BusinessException e) {
+            // 失败回复也写 result，保证前端聊天历史能完整回放本轮对话
+            sessionService.saveJudgment(session.getId(), e.getMessage(), null);
             sessionService.markFailed(session.getId(), e.getMessage());
             return ResultUtil.success(e.getMessage());
         } catch (Exception e) {
+            sessionService.saveJudgment(session.getId(), "判责流程异常，请稍后重试或转人工处理。", null);
             sessionService.markFailed(session.getId(), e.getMessage());
             return ResultUtil.success("判责流程异常，请稍后重试或转人工处理。");
         }
@@ -190,8 +193,11 @@ public class LiabilityOrchestrator {
      * 以 trace 表为唯一事实源，后续新增 LLM 步骤只要落 trace 就自动纳入汇总。
      */
     private BaseResponse<String> complete(Session session, long start, String data) {
+        // 面向用户的回复统一落 result（含 P1/P3 追问、无规则等非 P8 路径），供聊天历史展示；
+        // P8 成功路径已带 reason 写过一次，这里 reason 传 null 不会覆盖（MyBatis-Plus 忽略 null 字段）
+        sessionService.saveJudgment(session.getId(), data, null);
         List<RunTrace> llmTraces = runTraceMapper.selectList(new LambdaQueryWrapper<RunTrace>()
-                .eq(RunTrace::getSessionNo, session.getSessionNo())
+                .eq(RunTrace::getSessionId, session.getId())
                 .eq(RunTrace::getNeedTokenRecord, 1)
                 .orderByAsc(RunTrace::getId));
         long totalTokens = llmTraces.stream().mapToLong(RunTrace::getTotalTokens).sum();
@@ -230,7 +236,7 @@ public class LiabilityOrchestrator {
                              long promptTokens, long completionTokens, long totalTokens,
                              long startMs, String detail) {
         RunTrace trace = RunTrace.builder()
-                .sessionNo(session.getSessionNo())
+                .sessionId(session.getId())
                 .step(step)
                 .tool(tool)
                 .model(model)

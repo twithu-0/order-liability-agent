@@ -24,8 +24,8 @@ public class ChatMemory implements Serializable  {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 会话编号，如 SES-20261116-000001 */
-    private String sessionNo;
+    /** 对话页全局 id，与 t_session.chat_id 一致，即 Spring AI conversationId */
+    private String chatId;
 
 
     /** 会话内容 */

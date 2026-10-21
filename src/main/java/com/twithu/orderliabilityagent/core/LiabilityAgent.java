@@ -27,6 +27,7 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
@@ -54,6 +55,14 @@ public class LiabilityAgent {
     private final ChatClient chatClient;
     /** 轻量模型，用于压缩历史对话、改写中文  */
     private final ChatClient lightChatClient;
+    /**
+     * P9 流式表达层专用 ChatClient，挂本地 Ollama 轻量模型。
+     * 与 lightChatClient 的区别：不挂 MessageChatMemoryAdvisor。
+     * 表达是无状态润色（输入=问题+已验证结论），不需要历史；
+     * 若进记忆会把润色 prompt 混入判责上下文窗口，污染后续轮次的抽取/判责。
+     * 模型分级落地：重任务（抽取/判责）走 DeepSeek，轻任务（流式表达）走本地模型，零云端成本。
+     */
+    private final ChatClient presentChatClient;
 
     public LiabilityAgent(ChatModel deepSeekChatModel, ChatModel ollamaChatModel,CustomJdbcChatMemoryRepository customJdbcChatMemoryRepository) {
         this.deepSeekChatModel = deepSeekChatModel;
@@ -75,7 +84,44 @@ public class LiabilityAgent {
                         , MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .build();
+        presentChatClient = ChatClient.builder(ollamaChatModel)
+                .defaultAdvisors(
+                        new LoggerAdvisor()
+                        , new TokenUsageAdvisor()
+                )
+                .build();
         this.ollamaChatModel = ollamaChatModel;
+    }
+
+    /** P9 表达层 prompt：只润色，不得改变事实与结论 */
+    private final String presentTemplate = """
+            你是酒店客服判责助手。下面的判责结论已经过证据比对和规则守卫校验，请把它改写成面向客人的回复。
+            要求：
+            - 不得改变责任方、规则编号和结论语义，只润色措辞
+            - 语气专业、有同理心、简洁，不超过 200 字
+            - 保留规则编号引用，结尾原样附上固定提示语"结论仅供参考，如有异议请人工复核。"
+            - 直接输出回复正文，不要 JSON、不要标题、不要解释你在做什么
+            - 必须把结论放在回复开头，例如“我认为是渠道责任，经核查...”、“目前我无法确定责任方，经核查...”
+
+            用户原始问题：{userPrompt}
+            判责结论：{result}
+            判责依据：{reason}
+            """;
+
+    /**
+     * P9 流式表达：把守卫通过的结论流式润色成客服话术。
+     * 返回 Flux<ChatResponse> 而非 Flux<String>：末 chunk 携带 usage 元数据，
+     * 供服务层落 P9 轨迹与 token 汇总（与 TokenUsageAdvisor 流式日志同源）。
+     * 可靠性与体验分离：事实正确性由 P8 守卫保证，本层只负责表达，出错可降级回原结论。
+     */
+    public Flux<ChatResponse> streamPresentation(String userPrompt, String result, String reason) {
+        return presentChatClient.prompt()
+                .user(promptUserSpec -> promptUserSpec.text(presentTemplate)
+                        .param("userPrompt", userPrompt)
+                        .param("result", result)
+                        .param("reason", reason == null ? "" : reason))
+                .stream()
+                .chatResponse();
     }
 
     /**
@@ -120,7 +166,7 @@ public class LiabilityAgent {
 
     /**
      * P7 判责：事实 + FieldDiff + 候选规则全文（含分支裁决）→ 结构化判决。
-     * 全流程最后一次 LLM 调用；ruleId 合法性由 P8 守卫校验。
+     * 同步主流程最后一次 LLM 调用（流式路径另有 P9 表达层）；ruleId 合法性由 P8 守卫校验。
      * 返回 ResponseEntity：entity 是判决结果，response 携带 usage 元数据，供编排器落 token 消耗。
      */
     public ResponseEntity<ChatResponse, JudgmentResult> judge(String complaint, List<FieldDiff> diffList, List<Rule> rules, String chatId) {

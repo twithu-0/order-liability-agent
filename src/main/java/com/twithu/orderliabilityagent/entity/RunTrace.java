@@ -28,8 +28,8 @@ public class RunTrace implements Serializable {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 会话编号，等于 conversationId，用于把记忆/结果/轨迹串起来 */
-    private String sessionNo;
+    /** 关联 t_session.id（单轮判责记录）。chat_id 是对话级 id，token 汇总须按单轮聚合，故轨迹挂主键 */
+    private Long sessionId;
 
     /** 步骤标识：P2_EXTRACT / P4_EVIDENCE / P5_DIFF / P6_RETRIEVAL / P7_JUDGE / P8_GUARD */
     private String step;
