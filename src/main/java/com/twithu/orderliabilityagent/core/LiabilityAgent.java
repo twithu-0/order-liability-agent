@@ -16,6 +16,7 @@ import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.ResponseEntity;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -53,6 +54,7 @@ public class LiabilityAgent {
 
     /** 重度模型  */
     private final ChatClient chatClient;
+    private final ChatClient noMemoryChatClient;
     /** 轻量模型，用于压缩历史对话、改写中文  */
     private final ChatClient lightChatClient;
     /**
@@ -74,6 +76,12 @@ public class LiabilityAgent {
                         new LoggerAdvisor()
                         , new TokenUsageAdvisor()
                         , MessageChatMemoryAdvisor.builder(chatMemory).build()
+                )
+                .build();
+        noMemoryChatClient = ChatClient.builder(deepSeekChatModel)
+                .defaultAdvisors(
+                        new LoggerAdvisor()
+                        , new TokenUsageAdvisor()
                 )
                 .build();
 
@@ -124,19 +132,28 @@ public class LiabilityAgent {
                 .chatResponse();
     }
 
-    /**
-     * P6 前置：查询变换（多轮历史压缩 + 检索友好改写）。
-     * 模型分级：查询侧理想挂轻量模型，当前本地 3b 改写不达标（评测已否决），暂用 DeepSeek；
-     * 换 qwen3:4b-instruct 等更强本地模型时只需替换 createQueryTransformers 的入参。
-     */
-    public String transformQuery(String userPrompt, String chatId) {
+    /** 提取历史对话记录并压缩 */
+    public String compressChatHistory(String userPrompt, String chatId){
         Query query = Query.builder()
                 .text(userPrompt)
                 .history(chatMemory.get(chatId))
                 .build();
-        for (QueryTransformer transformer : AdvisorFactory.createQueryTransformers(deepSeekChatModel)) {
-            query = transformer.transform(query);
-        }
+        QueryTransformer transformer = AdvisorFactory.createCompressionTransformer(deepSeekChatModel);
+        query = transformer.transform(query);
+        return query.text();
+    }
+
+    /**
+     * P6 前置：查询变换。
+     * 模型分级：查询侧理想挂轻量模型，当前本地 3b 改写不达标（评测已否决），暂用 DeepSeek；
+     * 换 qwen3:4b-instruct 等更强本地模型时只需替换 createQueryTransformers 的入参。
+     */
+    public String transformQuery(String userPrompt) {
+        Query query = Query.builder()
+                .text(userPrompt)
+                .build();
+        QueryTransformer transformer = AdvisorFactory.createRewriteTransformer(deepSeekChatModel);
+        query = transformer.transform(query);
         return query.text();
     }
 
@@ -201,7 +218,7 @@ public class LiabilityAgent {
      * 供编排器落 RunTrace 的 token 消耗（与 TokenUsageAdvisor 日志同源）。
      */
     public ResponseEntity<ChatResponse, ExtractResult> extract(PreprocessResult preprocessResult, String chatId) {
-        return chatClient.prompt()
+        return noMemoryChatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
                 .system(documentLoader.loadResource("classpath:prompt/extractPrompt.txt"))
                 .user(promptUserSpec -> promptUserSpec.text(template)

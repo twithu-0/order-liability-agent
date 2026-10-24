@@ -23,6 +23,7 @@ import com.twithu.orderliabilityagent.mapper.RunTraceMapper;
 import com.twithu.orderliabilityagent.service.SessionService;
 import com.twithu.orderliabilityagent.service.UserService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ResponseEntity;
 import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.metadata.Usage;
@@ -39,6 +40,7 @@ import java.util.*;
  * → P6 规则 RAG 召回（查询变换+检索+重排+MySQL回查） → P7 LLM 判责 → P8 守卫校验。
  * LLM 调用点：P2 抽取、P6 查询变换（压缩/改写）、P7 判责；检索/回查/守卫均为确定性代码。
  */
+@Slf4j
 @Component
 public class LiabilityOrchestrator {
     @Resource
@@ -65,12 +67,17 @@ public class LiabilityOrchestrator {
 
         try {
             // P1 预处理：只硬校验订单号；渠道/供应商可由证据快照补齐
-            PreprocessResult preResult = UserPromptPreprocess.extract(userPrompt);
+            String compressedPrompt = agent.compressChatHistory(userPrompt, chatId);
+            log.info("用户原输入：{}\n压缩对话历史后输入：{}", userPrompt, compressedPrompt);
+            PreprocessResult preResult = UserPromptPreprocess.extract(compressedPrompt);
             if (!preResult.isLiabilityRequest()){
                 return complete(session, start,
                         "请补充订单号（MT开头+8位数字）后再次提问。");
             }
 
+            OrderEvidence evidence = orderEvidenceTool.getOrderEvidence(preResult.getOrderNoHint());
+            preResult.setCustomerHint(evidence.channel());
+            preResult.setSupplierHint(evidence.supplier());
             // P2 LLM 结构化抽取：responseEntity 同时拿实体与 usage，token 落 trace
             long t2 = System.currentTimeMillis();
             ResponseEntity<ChatResponse, ExtractResult> extractResponse = agent.extract(preResult, chatId);
@@ -108,7 +115,6 @@ public class LiabilityOrchestrator {
 
             // P4 获取证据：确定性调用 mock 工具拿四跳快照
             long t4 = System.currentTimeMillis();
-            OrderEvidence evidence = orderEvidenceTool.getOrderEvidence(orderNo);
             saveTrace(session, "P4_EVIDENCE", "getOrderEvidence",  t4, "orderNo=" + orderNo);
 
             // 客人实际体验值以本次投诉抽取为准，覆盖/补齐快照中的 customerActual
@@ -136,7 +142,7 @@ public class LiabilityOrchestrator {
 
             // P6 规则召回：查询变换 → 宽召回+重排（零 LLM）→ 按 rule_id 回查 MySQL 拿规则全文
             long t6 = System.currentTimeMillis();
-            String retrievalQuery = agent.transformQuery(userPrompt, chatId);
+            String retrievalQuery = agent.transformQuery(compressedPrompt);
             List<Document> candidates = agent.retrieveRules(retrievalQuery, extractResult.getDimension());
             List<String> ruleIds = candidates.stream()
                     .map(d -> Objects.toString(d.getMetadata().get("rule_id"), null))
@@ -178,10 +184,12 @@ public class LiabilityOrchestrator {
             return complete(session, start, resp);
         } catch (BusinessException e) {
             // 失败回复也写 result，保证前端聊天历史能完整回放本轮对话
+            log.error("判责流程出现系统异常：",e);
             sessionService.saveJudgment(session.getId(), e.getMessage(), null);
             sessionService.markFailed(session.getId(), e.getMessage());
             return ResultUtil.success(e.getMessage());
         } catch (Exception e) {
+            log.error("判责流程出现系统异常：",e);
             sessionService.saveJudgment(session.getId(), "判责流程异常，请稍后重试或转人工处理。", null);
             sessionService.markFailed(session.getId(), e.getMessage());
             return ResultUtil.success("判责流程异常，请稍后重试或转人工处理。");
@@ -201,9 +209,7 @@ public class LiabilityOrchestrator {
                 .eq(RunTrace::getNeedTokenRecord, 1)
                 .orderByAsc(RunTrace::getId));
         long totalTokens = llmTraces.stream().mapToLong(RunTrace::getTotalTokens).sum();
-        // 模型名取最后一个 LLM 步骤：完整流程是 P7 判责，提前终止是 P2 抽取；无 LLM 调用为 null
-        String modelName = llmTraces.isEmpty() ? null : llmTraces.get(llmTraces.size() - 1).getModel();
-        sessionService.markCompleted(session.getId(), modelName, totalTokens, null,
+        sessionService.markCompleted(session.getId(), totalTokens, null,
                 (int) (System.currentTimeMillis() - start));
         return ResultUtil.success(data);
     }

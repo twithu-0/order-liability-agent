@@ -48,11 +48,29 @@ public class AdvisorFactory {
      */
     public static Advisor createRewriteAdvisor(ChatModel chatModel) {
         return RetrievalAugmentationAdvisor.builder()
-                .queryTransformers(createQueryTransformers(chatModel))
+                .queryTransformers(createRewriteTransformer(chatModel))
                 .build();
     }
 
 
+    /**
+     * 查询侧变换链：多轮历史压缩（空历史短路）→ 检索友好改写。
+     * 独立暴露便于单测直接验证变换效果。
+     * 此处的 chatModel 只服务查询侧，与判责模型无关，可传轻量模型降低成本。
+     */
+    public static QueryTransformer createCompressionTransformer(ChatModel chatModel) {
+        ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
+        return new HistoryCompressionTransformer(chatClientBuilder);
+    }
+
+    public static QueryTransformer createRewriteTransformer(ChatModel chatModel) {
+        ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
+        return RewriteQueryTransformer.builder()
+                        .chatClientBuilder(chatClientBuilder)
+                        .promptTemplate(REWRITE_TEMPLATE)
+                        .targetSearchSystem("酒店订单判责规则向量库")
+                        .build();
+    }
 
     public static Advisor createRetrievalAdvisor(VectorStore vectorStore, String dimension) {
         Filter.Expression expression = new FilterExpressionBuilder()
@@ -78,23 +96,6 @@ public class AdvisorFactory {
             你应该输出下面的内容：
             没有检索到相关规则，请联系管理员或者换个问题继续问。
             """);
-
-
-    /**
-     * 查询侧变换链：多轮历史压缩（空历史短路）→ 检索友好改写。
-     * 独立暴露便于单测直接验证变换效果。
-     * 此处的 chatModel 只服务查询侧，与判责模型无关，可传轻量模型降低成本。
-     */
-    public static List<QueryTransformer> createQueryTransformers(ChatModel chatModel) {
-        ChatClient.Builder chatClientBuilder = ChatClient.builder(chatModel);
-        return List.of(
-                new HistoryCompressionTransformer(chatClientBuilder),
-                RewriteQueryTransformer.builder()
-                        .chatClientBuilder(chatClientBuilder)
-                        .promptTemplate(REWRITE_TEMPLATE)
-                        .targetSearchSystem("酒店订单判责规则向量库")
-                        .build());
-    }
 
     public static void SimilaritySearch(VectorStore vectorStore, String query){
 

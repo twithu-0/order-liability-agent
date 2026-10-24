@@ -13,7 +13,7 @@ import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransfo
 public class HistoryCompressionTransformer implements QueryTransformer {
 
     private static final PromptTemplate COMPRESSION_TEMPLATE = new PromptTemplate("""
-            根据以下对话历史和最新问题，合成一个无需上下文即可理解的独立查询。
+            根据以下对话历史和最新问题，合成一个无需上下文即可理解的独立查询。用户一次对话中可能会询问多个订单相关问题，之前已完结的订单问题不要压缩。
             要求：保留用户真实意图；把历史中的指代（如"那个订单""这家酒店"）补全为具体信息；只输出查询文本，不要解释。
 
             对话历史：

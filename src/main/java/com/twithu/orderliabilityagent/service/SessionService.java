@@ -27,15 +27,14 @@ public interface SessionService {
     void markRunning(Long sessionId);
 
     /**
-     * 标记会话完成：RUNNING → COMPLETED，并记录模型统计。
+     * 标记会话完成：RUNNING → COMPLETED，并记录消耗统计。
      *
      * @param sessionId    会话 id
-     * @param modelName    使用的模型名
      * @param totalTokens  消耗 token 总数
      * @param costEstimate 成本估算（元），可为 null
      * @param latencyMs    总耗时（毫秒）
      */
-    void markCompleted(Long sessionId, String modelName, Long totalTokens,
+    void markCompleted(Long sessionId, Long totalTokens,
                        BigDecimal costEstimate, Integer latencyMs);
 
     /**

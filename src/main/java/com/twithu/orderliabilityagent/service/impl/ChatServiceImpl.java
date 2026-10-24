@@ -79,7 +79,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public ChatVO createChat() {
         User user = userService.getLoginUser();
-        String chatId = "chat_" + user.getId() + "_" + RandomUtil.randomString(6);
+        String chatId = "chat_" + RandomUtil.randomString(4) + "_" + user.getId();
         return ChatVO.builder()
                 .chatId(chatId)
                 .title(DEFAULT_TITLE)
@@ -214,8 +214,8 @@ public class ChatServiceImpl implements ChatService {
 
         Flux<ServerSentEvent<String>> deltas = agent
                 .streamPresentation(userPrompt, original, session.getReason())// 润色result+reason，返回总的流式输出
-                .doOnNext(cr -> captureUsage(cr, usageRef, modelRef))// 收集 token usage 与模型名称，只取最后一个chunk的信息（每个chuck的modelName都是一样的，但是usage会累加）
-                .map(cr -> cr.getResult() == null || cr.getResult().getOutput() == null
+                .doOnNext(cr -> captureUsage(cr, usageRef, modelRef))// 收集 token usage（通常在最后一个chunk上） 与模型名称
+                .mapNotNull(cr -> cr.getResult() == null || cr.getResult().getOutput() == null
                         ? null : cr.getResult().getOutput().getText()) // Flux<ChatResponse> 转换为 Flux<String> （润色后的输出）
                 .filter(StringUtils::hasText)
                 .doOnNext(aggregated::append)
@@ -228,11 +228,12 @@ public class ChatServiceImpl implements ChatService {
             boolean replaced = !finalText.equals(presented);
             sessionService.saveJudgment(session.getId(), finalText, null);
             savePresentTrace(session, modelRef.get(), usageRef.get(), start, replaced);
+            log.info("LLM判责原始输出：{}", original); // 打印原始输出
             return Flux.just(sse("done", finalText)); // 这里 .just 是什么含义
         });
-
+        // 这些只是在"组装管道"（声明），一行代码都不会执行；直到被订阅才真正流动。本项目里 Spring MVC 往 SSE 写响应时自动订阅
         return Flux.concat(deltas, finish)
-                .timeout(PRESENT_TIMEOUT)
+                .timeout(PRESENT_TIMEOUT) //两个元素事件间隔时间上限
                 .onErrorResume(e -> {
                     log.warn("P9 流式表达失败，降级输出原结论：chatId={}, reason={}",
                             session.getChatId(), e.getMessage());

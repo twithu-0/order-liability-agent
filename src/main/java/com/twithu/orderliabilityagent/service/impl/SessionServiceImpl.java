@@ -64,7 +64,7 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, Session> impl
     }
 
     @Override
-    public void markCompleted(Long sessionId, String modelName, Long totalTokens,
+    public void markCompleted(Long sessionId, Long totalTokens,
                               BigDecimal costEstimate, Integer latencyMs) {
         Session session = getById(sessionId);
         // 幂等：已完成则跳过
@@ -75,7 +75,6 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, Session> impl
                 ErrorCode.OPERATION_ERROR,
                 "非法状态流转：" + session.getStatus() + " → COMPLETED");
         session.setStatus(SessionStatus.COMPLETED.getCode());
-        session.setModelName(modelName);
         session.setTotalTokens(totalTokens);
         session.setTimeCost(latencyMs);
         session.setRemark(null);

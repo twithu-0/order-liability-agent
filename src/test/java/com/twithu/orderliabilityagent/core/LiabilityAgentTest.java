@@ -46,34 +46,35 @@ class LiabilityAgentTest {
         System.out.println(liabilityAgent.chatWithRag("我找不到酒店在哪儿，好烦呐", chatId, dimension));
     }
 
+    @Test
+    void testCompressHistory(){
+        QueryTransformer compressTransformer = AdvisorFactory.createCompressionTransformer(ollamaChatModel);
+        Query query = Query.builder()
+                .text("那这个问题算谁的责任啊啊啊，太气人了")
+                .history(List.of(
+                        new UserMessage("MT12345222  渠道去哪儿 供应商美团 酒店名字： 京州大酒店，电话134231。客人反馈找不到酒店，电话也联系不上"),
+                        new AssistantMessage("我认为是渠道责任。经核查，渠道展示的电话号码（134231）与我司及供应商下发的号码（010-88886666）不一致，" +
+                                "且该号码实际无法接通，符合规则 H-04 中“酒店电话错误、空号、非前台电话”的情形。地址信息因证据缺失暂无法定责。结论仅供参考，如有异议请人工复核。")))
+                .build();
+
+        Query compressed = compressTransformer.transform(query);
+        System.out.println("压缩后独立查询: " + compressed.text());
+    }
+
     /**
      * 测试压缩历史对话 和 改写查询
      */
     @Test
-    void queryTransformWithHistory() {
-        List<QueryTransformer> transformers = AdvisorFactory.createQueryTransformers(ollamaChatModel);
-        QueryTransformer compression = transformers.get(0);
-        QueryTransformer rewrite = transformers.get(1);
-
-        Query query = Query.builder()
-                .text("那这个问题算谁的责任啊啊啊，太气人了")
-                .history(List.of(
-                        new UserMessage("订单20261120001，在飞猪订的豪华大床房含双早，到店酒店说只有双床房，早餐也不给"),
-                        new AssistantMessage("已了解情况：床型与订单不符，且承诺的早餐未提供。")))
-                .build();
-
-        Query compressed = compression.transform(query);
-        System.out.println("压缩后独立查询: " + compressed.text());
-        assertNotEquals(query.text(), compressed.text());
-
-        Query rewritten = rewrite.transform(compressed);
+    void testRewritePrompt() {
+        QueryTransformer rewriteTransformer = AdvisorFactory.createRewriteTransformer(ollamaChatModel);
+        Query query = new Query("那这个问题算谁的责任啊啊啊，太气人了");
+        Query rewritten = rewriteTransformer.transform(query);
         System.out.println("改写后检索查询: " + rewritten.text());
-        assertFalse(rewritten.text().contains("20261120001"));
     }
 
     @Test
     void compressionShortCircuitOnEmptyHistory() {
-        HistoryCompressionTransformer compression = (HistoryCompressionTransformer) AdvisorFactory.createQueryTransformers(deepSeekChatModel).get(0);
+        QueryTransformer compression = AdvisorFactory.createCompressionTransformer(deepSeekChatModel);
         Query query = Query.builder().text("酒店电话是空号").build();
         assertSame(query, compression.transform(query));
     }

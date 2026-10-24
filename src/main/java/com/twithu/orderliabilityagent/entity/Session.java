@@ -54,9 +54,6 @@ public class Session implements Serializable  {
     /** 会话状态 */
     private String status;
 
-    /** 使用的模型 */
-    private String modelName;
-
     /** 消耗 token 总数；会话完成时由编排器汇总 need_token_record=1 的 LLM 步骤回写，null 表示未统计（历史数据/失败会话） */
     private Long totalTokens;
 

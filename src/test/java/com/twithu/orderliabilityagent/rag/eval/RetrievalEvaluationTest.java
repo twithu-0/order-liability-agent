@@ -83,15 +83,13 @@ class RetrievalEvaluationTest {
     void queryTransformComparison() throws IOException {
         List<EvalCase> cases = loadCases();
         RetrievalEvaluator evaluator = new RetrievalEvaluator(pgVectorStore);
-        List<QueryTransformer> transformers = AdvisorFactory.createQueryTransformers(deepSeekChatModel);
+        QueryTransformer rewriteTransformer = AdvisorFactory.createRewriteTransformer(deepSeekChatModel);
 
         List<EvalCase> rewritten = new ArrayList<>();
         for (EvalCase c : cases) {
             Query query = Query.builder().text(c.query()).build();
             System.out.println("原输入: " + c.query());
-            for (QueryTransformer t : transformers) {
-                query = t.transform(query);
-            }
+            query = rewriteTransformer.transform(query);
             System.out.println("压缩改写后: " + query.text() + "\n");
             rewritten.add(new EvalCase(query.text(), c.dimension(), c.expected(), c.note()));
         }
