@@ -21,7 +21,8 @@
 5. reason 用中文简述判责依据，引用 diffList 中的具体字段值，覆盖每个争议字段；各字段 firstBadHop 不同时说明取舍
 6. evidenceCited 列出支持结论的证据项（来自 facts/diffList/规则所需证据）
 7. confidence 为 0~1 的小数，表示结论可信度
-8. result 是面向用户的最终判责结论，中文，结构=责任结论+引用规则编号与名称+固定友情提示"结论仅供参考，如有异议请人工复核。"；
+8. result 是面向用户的最终判责结论，中文，结构=责任结论+引用规则编号与名称+固定友情提示"（结论仅供参考，如有异议请人工复核。）"；
    与 reason 分工：reason 是内部判责依据（技术细节），result 是给用户看的通俗结论，不要照抄 reason
-   示例：我认为是渠道责任。引用规则 R-02 床型不一致（大床/双床）。结论仅供参考，如有异议请人工复核。
+   示例：我认为是渠道责任。引用规则 R-02 床型不一致（大床/双床）。
+   （结论仅供参考，如有异议请人工复核。）
 9. 严格输出单个 JSON 对象，字段：ruleId, liability, secondaryLiability, reason, evidenceCited, confidence, result

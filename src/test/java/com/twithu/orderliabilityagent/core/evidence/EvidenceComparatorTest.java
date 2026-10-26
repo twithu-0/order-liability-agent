@@ -4,24 +4,32 @@ import com.twithu.orderliabilityagent.model.dto.FieldDiff;
 import com.twithu.orderliabilityagent.model.dto.OrderEvidence;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * P5 比对器单测：用 mock/orders.json 真实 fixture 覆盖五种 firstBadHop。
+ * P5 比对器单测：用 src/test/resources/mock/orders.json fixture 覆盖五种 firstBadHop。
+ * fixture 与 t_order 初始数据同源（原 mock 订单已迁入 DB），此处直接加载 JSON 不依赖数据库。
  * 纯单元测试，不启动 Spring 上下文。
  */
 class EvidenceComparatorTest {
 
-    private static MockOrderEvidenceRepository repository;
+    private static Map<String, OrderEvidence> orders;
 
     @BeforeAll
     static void setUp() throws IOException {
-        repository = new MockOrderEvidenceRepository(JsonMapper.builder().build());
+        try (InputStream in = new ClassPathResource("mock/orders.json").getInputStream()) {
+            orders = JsonMapper.builder().build()
+                    .readValue(in, new TypeReference<Map<String, OrderEvidence>>() {});
+        }
     }
 
     @Test
@@ -99,7 +107,7 @@ class EvidenceComparatorTest {
 
     /** 模拟编排器行为：用本次投诉抽取的 actualValue 覆盖快照中的客人实际值 */
     private OrderEvidence withActual(String orderNo, String field, String actualValue) {
-        OrderEvidence base = repository.find(orderNo);
+        OrderEvidence base = orders.get(orderNo);
         java.util.Map<String, String> actual = new java.util.HashMap<>(
                 base.customerActual() == null ? java.util.Map.of() : base.customerActual());
         actual.put(field, actualValue);

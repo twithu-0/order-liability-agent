@@ -40,4 +40,7 @@ public class ChatMemory implements Serializable  {
     /** 实际对话顺序 */
     private Integer sequenceId;
 
+    /** 完结标记：1=该消息属于已完结的订单问题（USER/ASSISTANT 成对打标），0=活跃。压缩只读活跃消息 */
+    private Integer completed;
+
 }

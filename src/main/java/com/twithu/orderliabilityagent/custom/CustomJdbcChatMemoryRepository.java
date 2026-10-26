@@ -35,6 +35,14 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
      */
     private static final String METADATA_KEY = "sequence_id";
 
+    /**
+     * metadata 中承载完结标记的 key。
+     * 完结轮次的 USER/ASSISTANT 成对打标（rememberTurn 保证成对追加，不存在半标记状态）；
+     * findByConversationId 只读 completed=0，ChatMemory.get 天然只返回活跃消息，
+     * 已完结订单的消息全量保留但不进压缩 prompt。
+     */
+    public static final String METADATA_COMPLETED = "completed";
+
     @Override
     public List<String> findConversationIds() {
         return mysqlJdbcTemplate.query("select distinct chat_id from t_chat_memory"
@@ -44,7 +52,14 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
     @Override
     public List<Message> findByConversationId(String conversationId) {
 
-        List<ChatMemory> memoryList = chatMemoryMapper.selectList(new QueryWrapper<ChatMemory>().eq("chat_id", conversationId));
+        // 活跃视图：只读未完结消息（completed=0）。已完结轮次成对打标后全量保留在表中，
+        // 但从此退出 ChatMemory.get 的读取范围，压缩/上下文只见活跃问题。
+        // 过滤在查询层做，窗口截断只作用于活跃消息，完结轮次不占窗口名额；
+        // 活跃消息必为完整问答对（rememberTurn 成对追加+成对打标），下方配对/截断逻辑不受影响。
+        // saveAll 的追加契约同样兼容：add 合并时读到的历史不含完结行，完结行永不被触碰。
+        List<ChatMemory> memoryList = chatMemoryMapper.selectList(new QueryWrapper<ChatMemory>()
+                .eq("chat_id", conversationId)
+                .eq("completed", 0));
         // 对话顺序 新->旧
         memoryList.sort(Comparator.comparingInt(ChatMemory::getSequenceId).reversed());
 
@@ -54,6 +69,7 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
             MessageType messageType = MessageType.valueOf(chatMemory.getType());
             Map<String, Object> metadata = new HashMap<>();
             metadata.put(METADATA_KEY, chatMemory.getSequenceId());
+            metadata.put(METADATA_COMPLETED, Integer.valueOf(1).equals(chatMemory.getCompleted()));
             Message message = switch (messageType) {
                 case USER -> {
                     isPaired = true;
@@ -107,13 +123,14 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
                     conversationId,
                     message.getText(),
                     message.getMessageType().name(),
-                    baseSeq + i
+                    baseSeq + i,
+                    Boolean.TRUE.equals(message.getMetadata().get(METADATA_COMPLETED)) ? 1 : 0
             });
         }
         mysqlJdbcTemplate.batchUpdate(
                 "INSERT INTO t_chat_memory " +
-                        "(chat_id, content, type, create_time, sequence_id) " +
-                        "VALUES (?, ?, ?, now(), ?)",
+                        "(chat_id, content, type, create_time, sequence_id, completed) " +
+                        "VALUES (?, ?, ?, now(), ?, ?)",
                 batchArgs
         );
     }
@@ -128,6 +145,18 @@ public class CustomJdbcChatMemoryRepository implements ChatMemoryRepository {
                 rs -> rs.next() ? rs.getInt(1) : 0,
                 conversationId);
         return (max == null ? 0 : max) + 1;
+    }
+
+    /**
+     * 完结闭环：把该对话当前所有活跃消息一并打标完结。
+     * 语义：压缩器读到的活跃消息就是喂进本次判决的全部上下文，判决出具=这段上下文整体使命结束。
+     * 只标当前轮会留下"已完结订单的残缺追问"仍活跃的脏状态，故闭环范围是整个活跃视图。
+     * 由 rememberTurn(completed=true) 在写入本轮完结对之前调用；数据全量保留，仅标记变更。
+     * 隐含假设：一个窗口同时只有一个活跃问题（串行缺槽补齐）；交叉提问的精确闭环需按订单号打标，见待办。
+     */
+    public void markActiveCompleted(String chatId) {
+        mysqlJdbcTemplate.update(
+                "UPDATE t_chat_memory SET completed = 1 WHERE chat_id = ? AND completed = 0", chatId);
     }
 
     @Override

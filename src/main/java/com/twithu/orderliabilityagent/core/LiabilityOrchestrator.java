@@ -36,9 +36,13 @@ import java.util.*;
 
 /**
  * 主要任务流程编排器
- * P1 预处理闸门 → P2 LLM 事实抽取 → P3 缺槽追问 → P4 获取证据 → P5 比对证据
+ * 历史压缩（前置，多轮缺槽补齐的关键）→ P1 预处理闸门 → P2 LLM 事实抽取 → P3 缺槽追问 → P4 获取证据 → P5 比对证据
  * → P6 规则 RAG 召回（查询变换+检索+重排+MySQL回查） → P7 LLM 判责 → P8 守卫校验。
- * LLM 调用点：P2 抽取、P6 查询变换（压缩/改写）、P7 判责；检索/回查/守卫均为确定性代码。
+ * LLM 调用点：前置压缩（仅多轮）、P2 抽取、P6 改写、P7 判责；检索/回查/守卫均为确定性代码。
+ * 对话记忆手动管理：全部 ChatClient 不挂 MemoryAdvisor，每轮收尾由 rememberTurn 写回
+ * "用户原话 + 面向用户结论"，供下一轮压缩读取（见 LiabilityAgent 类注释）。
+ * 完结状态由控制流定义：P8 守卫通过=完结（问答对打 completed=1，退出压缩活跃视图），
+ * 追问/无规则=未完结（completed=0，留在活跃视图供缺槽补齐）。
  */
 @Slf4j
 @Component
@@ -65,14 +69,16 @@ public class LiabilityOrchestrator {
         sessionService.markRunning(session.getId());
         long start = System.currentTimeMillis();
 
+        // 记忆写回统一用压缩后的自包含输入；压缩本身异常时兜底为原话
+        String compressedPrompt = userPrompt;
         try {
             // P1 预处理：只硬校验订单号；渠道/供应商可由证据快照补齐
-            String compressedPrompt = agent.compressChatHistory(userPrompt, chatId);
+            compressedPrompt = agent.compressChatHistory(userPrompt, chatId);
             log.info("用户原输入：{}\n压缩对话历史后输入：{}", userPrompt, compressedPrompt);
             PreprocessResult preResult = UserPromptPreprocess.extract(compressedPrompt);
             if (!preResult.isLiabilityRequest()){
                 return complete(session, start,
-                        "请补充订单号（MT开头+8位数字）后再次提问。");
+                        "请补充订单号（MT开头+8位数字）后再次提问。", false, compressedPrompt);
             }
 
             OrderEvidence evidence = orderEvidenceTool.getOrderEvidence(preResult.getOrderNoHint());
@@ -93,12 +99,12 @@ public class LiabilityOrchestrator {
             String orderNo = preResult.getOrderNoHint() != null
                     ? preResult.getOrderNoHint() : extractResult.getOrderNo();
             if (orderNo == null) {
-                return complete(session, start, "请补充订单号（MT开头+8位数字）后再次提问。");
+                return complete(session, start, "请补充订单号（MT开头+8位数字）后再次提问。", false, compressedPrompt);
             }
             List<String> disputedFields = extractResult.getDisputedFieldList();
             if (CollUtil.isEmpty(disputedFields)) {
                 return complete(session, start,
-                        "已收到订单 " + orderNo + "，请补充：具体是哪个信息不一致（如床型、早餐、电话），以及客人实际遇到的情况。");
+                        "已收到订单 " + orderNo + "，请补充：具体是哪个信息不一致（如床型、早餐、电话），以及客人实际遇到的情况。", false, compressedPrompt);
             }
             // 逐字段追问：每个争议点都有实际值才进入比对
             List<String> actualValues = extractResult.getActualValueList();
@@ -110,7 +116,7 @@ public class LiabilityOrchestrator {
             }
             if (!missing.isEmpty()) {
                 return complete(session, start,
-                        "已收到订单 " + orderNo + "，请补充以下争议点客人实际遇到的情况：" + String.join("、", missing));
+                        "已收到订单 " + orderNo + "，请补充以下争议点客人实际遇到的情况：" + String.join("、", missing), false, compressedPrompt);
             }
 
             // P4 获取证据：确定性调用 mock 工具拿四跳快照
@@ -150,7 +156,7 @@ public class LiabilityOrchestrator {
                     .toList();
             saveTrace(session, "P6_RETRIEVAL", "pgvector",  t6, "候选规则=" + ruleIds);
             if (ruleIds.isEmpty()) {
-                return complete(session, start, "未检索到相关规则，无法判责，请转人工处理。");
+                return complete(session, start, "未检索到相关规则，无法判责，请转人工处理。", false, compressedPrompt);
             }
             List<Rule> rules = ruleMapper.selectList(new LambdaQueryWrapper<Rule>()
                     .in(Rule::getRuleId, ruleIds)
@@ -181,17 +187,21 @@ public class LiabilityOrchestrator {
             result.put("needsReview", guard.needsReview());
             result.put("guardIssues", guard.issues());
             result.put("response", resp);
-            return complete(session, start, resp);
+            // P8 守卫通过=订单问题完结（needsReview 软风险也算完结，判决已出具）
+            return complete(session, start, resp, true, compressedPrompt);
         } catch (BusinessException e) {
             // 失败回复也写 result，保证前端聊天历史能完整回放本轮对话
             log.error("判责流程出现系统异常：",e);
             sessionService.saveJudgment(session.getId(), e.getMessage(), null);
             sessionService.markFailed(session.getId(), e.getMessage());
+            // 失败=未完结：压缩输入写回活跃视图，下轮重试不丢上下文
+            agent.rememberTurn(session.getChatId(), compressedPrompt, e.getMessage(), false);
             return ResultUtil.success(e.getMessage());
         } catch (Exception e) {
             log.error("判责流程出现系统异常：",e);
             sessionService.saveJudgment(session.getId(), "判责流程异常，请稍后重试或转人工处理。", null);
             sessionService.markFailed(session.getId(), e.getMessage());
+            agent.rememberTurn(session.getChatId(), compressedPrompt, "判责流程异常，请稍后重试或转人工处理。", false);
             return ResultUtil.success("判责流程异常，请稍后重试或转人工处理。");
         }
     }
@@ -199,8 +209,11 @@ public class LiabilityOrchestrator {
     /**
      * 会话完成：先按 need_token_record=1 汇总 LLM 步骤的 token 消耗回写 t_session，再标记 COMPLETED。
      * 以 trace 表为唯一事实源，后续新增 LLM 步骤只要落 trace 就自动纳入汇总。
+     * judged=true（P8 完结）时本轮问答对打完结标记，退出压缩活跃视图；
+     * judged=false（追问/无规则）留在活跃视图，供下一轮缺槽补齐。
+     * memoryInput 为压缩后的自包含输入：未完结轮次存碎片原话会导致后续上下文退化。
      */
-    private BaseResponse<String> complete(Session session, long start, String data) {
+    private BaseResponse<String> complete(Session session, long start, String data, boolean judged, String memoryInput) {
         // 面向用户的回复统一落 result（含 P1/P3 追问、无规则等非 P8 路径），供聊天历史展示；
         // P8 成功路径已带 reason 写过一次，这里 reason 传 null 不会覆盖（MyBatis-Plus 忽略 null 字段）
         sessionService.saveJudgment(session.getId(), data, null);
@@ -211,6 +224,8 @@ public class LiabilityOrchestrator {
         long totalTokens = llmTraces.stream().mapToLong(RunTrace::getTotalTokens).sum();
         sessionService.markCompleted(session.getId(), totalTokens, null,
                 (int) (System.currentTimeMillis() - start));
+        // 记忆唯一写入点：本轮问答对（压缩输入 + 回复）入库；judged=true 时先闭环活跃视图再写完结对
+        agent.rememberTurn(session.getChatId(), memoryInput, data, judged);
         return ResultUtil.success(data);
     }
 
@@ -302,6 +317,6 @@ public class LiabilityOrchestrator {
                 .findFirst()
                 .orElse("");
         return "我认为是" + judgment.getLiability().getDesc() + "。引用规则 "
-                + judgment.getRuleId() + " " + ruleName + "。结论仅供参考，如有异议请人工复核。";
+                + judgment.getRuleId() + " " + ruleName + "。（结论仅供参考，如有异议请人工复核。）";
     }
 }

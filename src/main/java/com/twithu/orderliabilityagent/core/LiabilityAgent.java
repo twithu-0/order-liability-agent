@@ -14,11 +14,14 @@ import com.twithu.orderliabilityagent.rag.AdvisorFactory;
 import com.twithu.orderliabilityagent.rag.postretrieval.PriorityRerankPostProcessor;
 import jakarta.annotation.Resource;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.ResponseEntity;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.document.Document;
@@ -32,10 +35,24 @@ import reactor.core.publisher.Flux;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.twithu.orderliabilityagent.custom.CustomJdbcChatMemoryRepository.MAX_MESSAGE;
 
+/**
+ * LLM 调用封装。
+ * 记忆管理设计：全部 ChatClient 均不挂 MessageChatMemoryAdvisor。
+ * Advisor 自动记忆存的是"发给模型的 prompt 模板 + 结构化 JSON"，会污染历史压缩；
+ * 改为编排层手动管理：读（compressChatHistory 里 chatMemory.get）与
+ * 写（每轮收尾 rememberTurn 存"用户原话 + 面向用户结论"）各只有一个入口，
+ * 记忆内容按"一轮问答"的业务语义定义，而非"一次模型调用"。
+ * 完结隔离：判责完成轮次的问答对成对打 completed=1 标记，数据全量保留；
+ * 过滤下沉到仓储 findByConversationId（只读 completed=0），ChatMemory.get 天然只见活跃问题。
+ * 完结闭环：判决出具时整个活跃视图一并打标（markActiveCompleted），
+ * 避免"已完结订单的残缺追问"残留活跃态；未完结轮次写入压缩后的自包含输入，防止碎片化丢上下文。
+ * 多轮上下文传递：压缩器把历史+当前输入合成独立查询，抽取直接消费压缩产物。
+ */
 @Component
 public class LiabilityAgent {
 
@@ -52,30 +69,29 @@ public class LiabilityAgent {
 
     private final ChatMemory chatMemory;
 
+    private final CustomJdbcChatMemoryRepository chatMemoryRepository;
+
     /** 重度模型  */
     private final ChatClient chatClient;
     private final ChatClient noMemoryChatClient;
-    /** 轻量模型，用于压缩历史对话、改写中文  */
-    private final ChatClient lightChatClient;
     /**
      * P9 流式表达层专用 ChatClient，挂本地 Ollama 轻量模型。
-     * 与 lightChatClient 的区别：不挂 MessageChatMemoryAdvisor。
      * 表达是无状态润色（输入=问题+已验证结论），不需要历史；
-     * 若进记忆会把润色 prompt 混入判责上下文窗口，污染后续轮次的抽取/判责。
      * 模型分级落地：重任务（抽取/判责）走 DeepSeek，轻任务（流式表达）走本地模型，零云端成本。
      */
     private final ChatClient presentChatClient;
 
     public LiabilityAgent(ChatModel deepSeekChatModel, ChatModel ollamaChatModel,CustomJdbcChatMemoryRepository customJdbcChatMemoryRepository) {
         this.deepSeekChatModel = deepSeekChatModel;
+        this.chatMemoryRepository = customJdbcChatMemoryRepository;
         this.chatMemory = MessageWindowChatMemory.builder()
                 .chatMemoryRepository(customJdbcChatMemoryRepository).maxMessages(MAX_MESSAGE).build();
         chatClient = ChatClient.builder(deepSeekChatModel)
                 // .defaultSystem()
                 .defaultAdvisors(
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         new LoggerAdvisor()
                         , new TokenUsageAdvisor()
-                        , MessageChatMemoryAdvisor.builder(chatMemory).build()
                 )
                 .build();
         noMemoryChatClient = ChatClient.builder(deepSeekChatModel)
@@ -85,13 +101,6 @@ public class LiabilityAgent {
                 )
                 .build();
 
-        lightChatClient = ChatClient.builder(ollamaChatModel)
-                .defaultAdvisors(
-                        new LoggerAdvisor()
-                        , new TokenUsageAdvisor()
-                        , MessageChatMemoryAdvisor.builder(chatMemory).build()
-                )
-                .build();
         presentChatClient = ChatClient.builder(ollamaChatModel)
                 .defaultAdvisors(
                         new LoggerAdvisor()
@@ -101,13 +110,42 @@ public class LiabilityAgent {
         this.ollamaChatModel = ollamaChatModel;
     }
 
+    /**
+     * 手动写回一轮对话记忆：只存业务语义级的干净消息对（用户原话 + 面向用户结论）。
+     * 由编排器在每轮收尾调用（含追问/失败路径），是记忆的唯一写入入口。
+     * userPrompt 应传压缩后的自包含输入（首轮空历史时压缩透传原话）：
+     * 未完结轮次若存原始碎片（如单独一个订单号），后续轮次上下文会退化丢失。
+     * 走 MessageWindowChatMemory.add → 自研 Repository.saveAll 追加模式：
+     * 新消息不带 sequence_id metadata，被判为新增直接追加，不会删重插历史。
+     * completed=true（P8 判责完成）时先闭环整个活跃视图（markActiveCompleted），
+     * 再写入本轮完结对——喂进本次判决的上下文整体退出活跃视图，数据全量保留。
+     * 顺序不可颠倒：add 内部会先读活跃视图合并，闭环后读到空，saveAll 只追加本轮完结对。
+     * 注意：存的是守卫后的原结论而非 P9 润色文本——记忆服务于上下文压缩，事实一致即可，
+     * 润色只是表达层差异；展示级历史以 t_session.result 为准。
+     */
+    public void rememberTurn(String chatId, String userPrompt, String assistantReply, boolean completed) {
+        if (chatId == null || chatId.isBlank()
+                || userPrompt == null || userPrompt.isBlank()
+                || assistantReply == null || assistantReply.isBlank()) {
+            return;
+        }
+        if (completed) {
+            chatMemoryRepository.markActiveCompleted(chatId);
+        }
+        Map<String, Object> metadata = Map.of(CustomJdbcChatMemoryRepository.METADATA_COMPLETED, completed);
+        List<Message> turn = List.of(
+                UserMessage.builder().text(userPrompt).metadata(metadata).build(),
+                AssistantMessage.builder().content(assistantReply).properties(metadata).build());
+        chatMemory.add(chatId, turn);
+    }
+
     /** P9 表达层 prompt：只润色，不得改变事实与结论 */
     private final String presentTemplate = """
             你是酒店客服判责助手。下面的判责结论已经过证据比对和规则守卫校验，请把它改写成面向客人的回复。
             要求：
             - 不得改变责任方、规则编号和结论语义，只润色措辞
             - 语气专业、有同理心、简洁，不超过 200 字
-            - 保留规则编号引用，结尾原样附上固定提示语"结论仅供参考，如有异议请人工复核。"
+            - 保留规则编号引用，结尾原样附上固定提示语"（结论仅供参考，如有异议请人工复核。）"
             - 直接输出回复正文，不要 JSON、不要标题、不要解释你在做什么
             - 必须把结论放在回复开头，例如“我认为是渠道责任，经核查...”、“目前我无法确定责任方，经核查...”
 
@@ -136,6 +174,7 @@ public class LiabilityAgent {
     public String compressChatHistory(String userPrompt, String chatId){
         Query query = Query.builder()
                 .text(userPrompt)
+                // ChatMemory.get → 仓储 findByConversationId 只读 completed=0，已完结订单不进压缩 prompt
                 .history(chatMemory.get(chatId))
                 .build();
         QueryTransformer transformer = AdvisorFactory.createCompressionTransformer(deepSeekChatModel);
@@ -194,8 +233,8 @@ public class LiabilityAgent {
                 .map(r -> r.getRuleId() + " " + r.getName() + "\n" + r.getContentMd()
                         + "\n分支裁决: " + r.getBranchesJson())
                 .collect(Collectors.joining("\n---\n"));
-        return chatClient.prompt()
-                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
+        // 判责自包含（事实+diff+规则全文），不需要历史；无记忆 client 避免规则全文进记忆
+        return noMemoryChatClient.prompt()
                 .system(documentLoader.loadResource("classpath:prompt/judgePrompt.txt"))
                 .user(promptUserSpec -> promptUserSpec.text(judgeTemplate)
                         .param("complaint", complaintJsonStr)
@@ -218,8 +257,8 @@ public class LiabilityAgent {
      * 供编排器落 RunTrace 的 token 消耗（与 TokenUsageAdvisor 日志同源）。
      */
     public ResponseEntity<ChatResponse, ExtractResult> extract(PreprocessResult preprocessResult, String chatId) {
+        // 多轮上下文已由压缩器合并进 normalizedInput，无需 Advisor 注入历史
         return noMemoryChatClient.prompt()
-                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
                 .system(documentLoader.loadResource("classpath:prompt/extractPrompt.txt"))
                 .user(promptUserSpec -> promptUserSpec.text(template)
                         .param("userPrompt", preprocessResult.getNormalizedInput())
@@ -244,7 +283,7 @@ public class LiabilityAgent {
     }
 
     public String CompressRewriteUserPrompt(String chatId) {
-        return lightChatClient.prompt()
+        return presentChatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(AdvisorFactory.createRewriteAdvisor(ollamaChatModel))
                 .call()

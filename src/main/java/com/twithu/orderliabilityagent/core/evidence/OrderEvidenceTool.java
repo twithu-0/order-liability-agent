@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * P4 获取证据：以 Spring AI @Tool 形式暴露订单证据查询。
+ * 数据源为 t_order 表（四跳快照 JSON 列）。
  * 主链路由 Orchestrator 确定性调用（稳定、可单测）；
  * 后续做判责 ChatClient 时可通过 .tools(orderEvidenceTool) 交给模型自主调用，
  * 演示完整 Tool Calling 循环。
@@ -16,9 +17,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class OrderEvidenceTool {
 
-    private final MockOrderEvidenceRepository repository;
+    private final OrderEvidenceRepository repository;
 
-    public OrderEvidenceTool(MockOrderEvidenceRepository repository) {
+    public OrderEvidenceTool(OrderEvidenceRepository repository) {
         this.repository = repository;
     }
 
