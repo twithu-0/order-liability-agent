@@ -100,14 +100,14 @@ public class AdvisorFactory {
     public static void SimilaritySearch(VectorStore vectorStore, String query){
 
         Filter.Expression expression = new FilterExpressionBuilder()
-                .eq("dimension", "hotel")
+                .eq("dimension", "terms")
                 .build();
 
         List<Document> documents = vectorStore.similaritySearch(SearchRequest.builder()
                 .query(query)
                 .filterExpression(expression)
                 .topK(10)
-                .similarityThreshold(0.5) // 不设限制，观察分数
+                .similarityThreshold(0.1) // 不设限制，观察分数
                 .build());
         for (Document doc : documents) {
             System.out.printf("%.4f  %s%n", doc.getScore(), doc.getText());

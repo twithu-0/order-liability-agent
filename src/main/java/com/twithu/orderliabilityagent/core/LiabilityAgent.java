@@ -214,6 +214,8 @@ public class LiabilityAgent {
 
     /** 判责用户消息模板：事实 + 证据比对 + 候选规则全文 */
     private final String judgeTemplate = """
+            supplier: {supplier}
+            channel: {channel}
             complaint: {complaint}
             diffList: {diffList}
             rules:
@@ -225,7 +227,8 @@ public class LiabilityAgent {
      * 同步主流程最后一次 LLM 调用（流式路径另有 P9 表达层）；ruleId 合法性由 P8 守卫校验。
      * 返回 ResponseEntity：entity 是判决结果，response 携带 usage 元数据，供编排器落 token 消耗。
      */
-    public ResponseEntity<ChatResponse, JudgmentResult> judge(String complaint, List<FieldDiff> diffList, List<Rule> rules, String chatId) {
+    public ResponseEntity<ChatResponse, JudgmentResult> judge(String supplier, String channel, String complaint
+            , List<FieldDiff> diffList, List<Rule> rules) {
         ObjectMapper objectMapper = new ObjectMapper();
         String diffJsonStr = objectMapper.writeValueAsString(diffList);
         String complaintJsonStr = objectMapper.writeValueAsString(complaint);
@@ -237,6 +240,8 @@ public class LiabilityAgent {
         return noMemoryChatClient.prompt()
                 .system(documentLoader.loadResource("classpath:prompt/judgePrompt.txt"))
                 .user(promptUserSpec -> promptUserSpec.text(judgeTemplate)
+                        .param("supplier", supplier)
+                        .param("channel", channel)
                         .param("complaint", complaintJsonStr)
                         .param("diffList", diffJsonStr)
                         .param("rules", ruleText))

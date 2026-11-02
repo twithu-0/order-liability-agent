@@ -11,7 +11,7 @@
 3. rules：候选规则全文，每条含规则编号、场景、所需证据、定责边界
 
 判责要求：
-1. ruleId 只能从候选规则中选择最匹配的一条（对应主要争议点），禁止编造不存在的规则编号
+1. ruleId 只能从候选的非特殊规则中选择最匹配的一条（对应主要争议点），禁止编造不存在的规则编号。特殊规则可以全部选中引用，特殊规则的dimension为“special”
 2. 多字段争议时，整体 firstBadHop 取各字段中最靠前的出错环节（优先级 OURS>CHANNEL>SUPPLIER>EVIDENCE_GAP>NONE）；
    优先按规则的分支裁决（branches）结合整体 firstBadHop 确定主责方；
    若你的结论与分支裁决不一致，必须在 reason 中说明充分理由

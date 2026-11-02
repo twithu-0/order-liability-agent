@@ -33,6 +33,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.twithu.orderliabilityagent.constants.RuleConstant.SPECIAL_RULE_ID_LIST;
 
 /**
  * 主要任务流程编排器
@@ -153,18 +156,22 @@ public class LiabilityOrchestrator {
             List<String> ruleIds = candidates.stream()
                     .map(d -> Objects.toString(d.getMetadata().get("rule_id"), null))
                     .filter(Objects::nonNull)
-                    .toList();
+                    .collect(Collectors.toList());
             saveTrace(session, "P6_RETRIEVAL", "pgvector",  t6, "候选规则=" + ruleIds);
             if (ruleIds.isEmpty()) {
+                log.error("以下输出未检索到规则：”{}“，维度：{}", retrievalQuery, extractResult.getDimension());
                 return complete(session, start, "未检索到相关规则，无法判责，请转人工处理。", false, compressedPrompt);
             }
+            //添加特殊规则
+            ruleIds.addAll(SPECIAL_RULE_ID_LIST);
             List<Rule> rules = ruleMapper.selectList(new LambdaQueryWrapper<Rule>()
                     .in(Rule::getRuleId, ruleIds)
                     .eq(Rule::getStatus, 1));
 
             // P7 LLM 判责：事实 + diff + 规则全文 → 结构化判决（同步主流程最后一次 LLM 调用；流式路径另有 P9 表达）
             long t7 = System.currentTimeMillis();
-            ResponseEntity<ChatResponse, JudgmentResult> judgeResponse = agent.judge(extractResult.getComplaint(), diffList, rules, chatId);
+            ResponseEntity<ChatResponse, JudgmentResult> judgeResponse = agent.judge(extractResult.getSupplier()
+                    , extractResult.getCustomer(), extractResult.getComplaint(), diffList, rules);
             JudgmentResult judgment = judgeResponse.entity();
             saveLlmTrace(session, "P7_JUDGE", judgeResponse.response(), t7,
                     "ruleId=" + judgment.getRuleId() + ", liability=" + judgment.getLiability());
