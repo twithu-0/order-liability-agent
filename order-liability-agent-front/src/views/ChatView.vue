@@ -31,7 +31,7 @@
 
     <!-- 右侧：消息区 + 底部输入框 -->
     <main class="main">
-      <div v-loading="historyLoading" class="messages">
+      <div ref="messagesBox" v-loading="historyLoading" class="messages">
         <!-- 选中了对话（含待创建的新对话）：渲染气泡，USER 右 / ASSISTANT 左 -->
         <template v-if="currentChatId">
           <div
@@ -101,7 +101,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getLoginUser, logout } from '../api/user'
@@ -119,6 +119,20 @@ const inputText = ref('')
 const sending = ref(false) // 发送期间禁用输入和按钮，防重复发送
 const listLoading = ref(false)
 const historyLoading = ref(false)
+const messagesBox = ref(null) // 消息区滚动容器
+
+// 消息一变（拉历史、追加气泡、流式增量、done 替换）就滚到底，滚动条默认停最下面
+// flush: 'post' 保证 DOM 更新后再量高度
+watch(
+    messages,
+    () => {
+      const el = messagesBox.value
+      if (el) {
+        el.scrollTop = el.scrollHeight
+      }
+    },
+    { deep: true, flush: 'post' }
+)
 
 onMounted(async () => {
   // 顶栏用户名；40100 时拦截器会跳登录页
