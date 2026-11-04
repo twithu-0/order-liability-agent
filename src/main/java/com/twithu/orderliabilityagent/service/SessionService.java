@@ -47,6 +47,15 @@ public interface SessionService {
     void saveJudgment(Long sessionId, String result, String reason);
 
     /**
+     * 回写代码可信度分：P8 ConfidenceScorer 计算后调用，落 confidence_score（decimal(3,2)）。
+     * 与 saveJudgment 分离，避免改动既有结论回写签名；score 为 null 时不落库。
+     *
+     * @param sessionId 会话 id
+     * @param score     代码可信度总分 0~1
+     */
+    void saveConfidenceScore(Long sessionId, BigDecimal score);
+
+    /**
      * 追加 token 消耗：P9 流式表达在会话 markCompleted 之后才结束，
      * 其用量以增量方式并入 total_tokens，保持 trace 表为唯一事实源、会话表为汇总视图。
      *

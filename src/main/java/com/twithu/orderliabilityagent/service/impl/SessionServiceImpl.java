@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Objects;
 
 /**
@@ -86,6 +87,17 @@ public class SessionServiceImpl extends ServiceImpl<SessionMapper, Session> impl
         Session session = getById(sessionId);
         session.setResult(result);
         session.setReason(reason);
+        sessionMapper.updateById(session);
+    }
+
+    @Override
+    public void saveConfidenceScore(Long sessionId, BigDecimal score) {
+        if (score == null) {
+            return;
+        }
+        Session session = getById(sessionId);
+        // decimal(3,2)：保留两位小数，HALF_UP 四舍五入
+        session.setConfidenceScore(score.setScale(2, RoundingMode.HALF_UP));
         sessionMapper.updateById(session);
     }
 

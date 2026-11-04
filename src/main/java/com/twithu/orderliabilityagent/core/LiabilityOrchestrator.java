@@ -8,6 +8,7 @@ import com.twithu.orderliabilityagent.common.ResultUtil;
 import com.twithu.orderliabilityagent.common.exception.BusinessException;
 import com.twithu.orderliabilityagent.core.evidence.EvidenceComparator;
 import com.twithu.orderliabilityagent.core.evidence.OrderEvidenceTool;
+import com.twithu.orderliabilityagent.core.guard.ConfidenceScorer;
 import com.twithu.orderliabilityagent.core.guard.JudgmentGuard;
 import com.twithu.orderliabilityagent.entity.Rule;
 import com.twithu.orderliabilityagent.entity.RunTrace;
@@ -32,6 +33,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -64,6 +66,8 @@ public class LiabilityOrchestrator {
     private RunTraceMapper runTraceMapper;
     @Resource
     private JudgmentGuard judgmentGuard;
+    @Resource
+    private ConfidenceScorer confidenceScorer;
 
     public BaseResponse<String> execute(String userPrompt, String chatId){
         User user = userService.getLoginUser();
@@ -152,8 +156,8 @@ public class LiabilityOrchestrator {
             // P6 规则召回：查询变换 → 宽召回+重排（零 LLM）→ 按 rule_id 回查 MySQL 拿规则全文
             long t6 = System.currentTimeMillis();
             String retrievalQuery = agent.transformQuery(compressedPrompt);
-            List<Document> candidates = agent.retrieveRules(retrievalQuery, extractResult.getDimension());
-            List<String> ruleIds = candidates.stream()
+            List<Document> retrievedRules = agent.retrieveRules(retrievalQuery, extractResult.getDimension());
+            List<String> ruleIds = retrievedRules.stream()
                     .map(d -> Objects.toString(d.getMetadata().get("rule_id"), null))
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
@@ -176,11 +180,26 @@ public class LiabilityOrchestrator {
             saveLlmTrace(session, "P7_JUDGE", judgeResponse.response(), t7,
                     "ruleId=" + judgment.getRuleId() + ", liability=" + judgment.getLiability());
 
-            // P8 守卫校验：引用合法性 + 分支一致性 + 置信度，纯代码
+            // P8 可信度打分 + 守卫校验：纯代码。打分三维（证据链/规则匹配/判决一致性），
+            // 特殊规则（去哪儿/大众点评 CHANNEL 跳→我司）豁免分支不一致；守卫消费代码分而非 LLM 自报值
             long t8 = System.currentTimeMillis();
-            JudgmentGuard.GuardReport guard = judgmentGuard.check(judgment, rules, diffList);
+            Rule hitRule = rules.stream()
+                    .filter(r -> Objects.equals(r.getRuleId(), judgment.getRuleId()))
+                    .findFirst().orElse(null);
+            ConfidenceScorer.ConfidenceReport confidence =
+                    confidenceScorer.score(judgment, hitRule, diffList, retrievedRules, evidence.channel());
+            JudgmentGuard.GuardReport guard =
+                    judgmentGuard.check(judgment, rules, diffList, evidence.channel(), confidence);
             saveTrace(session, "P8_GUARD", null, t8,
                     "needsReview=" + guard.needsReview() + ", issues=" + guard.issues());
+            saveTrace(session, "P8_CONFIDENCE", null, t8,
+                    "score=" + String.format("%.2f", confidence.score()) + ", tier=" + confidence.tier()
+                            + ", evidence=" + String.format("%.2f", confidence.evidenceScore())
+                            + ", rule=" + String.format("%.2f", confidence.ruleScore())
+                            + ", consistency=" + String.format("%.2f", confidence.consistencyScore())
+                            + ", specialOverride=" + confidence.specialOverride()
+                            + ", deductions=" + confidence.deductions());
+            sessionService.saveConfidenceScore(session.getId(), BigDecimal.valueOf(confidence.score()));
 
             // 判责结论回写 t_session：result 面向用户（LLM 漏输出时代码兜底），reason 为判责依据
             String resp = userFacingResult(judgment, rules);

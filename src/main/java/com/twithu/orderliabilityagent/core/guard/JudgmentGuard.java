@@ -1,8 +1,5 @@
 package com.twithu.orderliabilityagent.core.guard;
 
-import cn.hutool.json.JSONArray;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.twithu.orderliabilityagent.common.exception.BusinessException;
 import com.twithu.orderliabilityagent.common.exception.ErrorCode;
 import com.twithu.orderliabilityagent.common.exception.ThrowUtil;
@@ -28,6 +25,8 @@ import java.util.Objects;
  * - confidence 低于 0.6
  * - firstBadHop 为 NONE / EVIDENCE_GAP
  * 多字段争议（最多 2 个）：分支一致性与复核判定均按聚合 firstBadHop（最靠前出错环节）。
+ * 特殊规则豁免：去哪儿/大众点评 CHANNEL 跳改判我司时，分支不一致不判违规（SpecialRulePolicy）。
+ * 置信度来源：传入 ConfidenceReport 时用代码分，否则回退 LLM 自报值（兼容旧调用）。
  */
 @Component
 public class JudgmentGuard {
@@ -38,7 +37,18 @@ public class JudgmentGuard {
     public record GuardReport(boolean needsReview, List<String> issues) {
     }
 
+    /** 兼容旧调用：无渠道（不豁免）、无代码分（回退 LLM 自报置信度） */
     public GuardReport check(JudgmentResult result, List<Rule> candidates, List<FieldDiff> diffList) {
+        return check(result, candidates, diffList, null, null);
+    }
+
+    /**
+     * 完整校验。
+     * - channel：订单 DB 渠道，用于特殊规则豁免判定
+     * - confidence：P8 代码可信度报告；非 null 时置信度软风险按代码分判定，null 回退 LLM 自报值
+     */
+    public GuardReport check(JudgmentResult result, List<Rule> candidates, List<FieldDiff> diffList,
+                             String channel, ConfidenceScorer.ConfidenceReport confidence) {
         ThrowUtil.throwIf(result == null, ErrorCode.OPERATION_ERROR, "判责结果为空");
         ThrowUtil.throwIf(result.getRuleId() == null || result.getRuleId().isBlank(),
                 ErrorCode.OPERATION_ERROR, "判责结果缺少 ruleId");
@@ -57,8 +67,10 @@ public class JudgmentGuard {
 
         // 分支一致性：多字段取聚合 firstBadHop（最靠前出错环节），查规则分支的期望责任方
         String hop = EvidenceComparator.aggregateHop(diffList);
-        Liability expected = expectedLiability(hit, hop);
-        if (expected != null && expected != result.getLiability()) {
+        Liability expected = ConfidenceScorer.branchExpectation(hit, hop);
+        // 特殊规则豁免：特殊渠道 CHANNEL 跳改判我司，分支不一致属预期，不判违规
+        boolean specialOverride = SpecialRulePolicy.isOverrideApplicable(channel, hop, result.getLiability());
+        if (expected != null && expected != result.getLiability() && !specialOverride) {
             ThrowUtil.throwIf(result.getReason() == null || result.getReason().isBlank(),
                     ErrorCode.OPERATION_ERROR,
                     "判决与规则分支不一致（期望 " + expected + "）且未给出理由");
@@ -66,7 +78,10 @@ public class JudgmentGuard {
             needsReview = true;
         }
 
-        if (result.getConfidence() == null || result.getConfidence() < CONFIDENCE_THRESHOLD) {
+        // 置信度：优先代码分，回退 LLM 自报值
+        double effectiveConfidence = confidence != null ? confidence.score()
+                : (result.getConfidence() == null ? 0.0 : result.getConfidence());
+        if (effectiveConfidence < CONFIDENCE_THRESHOLD) {
             issues.add("置信度不足 " + CONFIDENCE_THRESHOLD);
             needsReview = true;
         }
@@ -75,21 +90,5 @@ public class JudgmentGuard {
             needsReview = true;
         }
         return new GuardReport(needsReview, issues);
-    }
-
-    /** 解析 branches_json，返回 firstBadHop 对应的期望责任方；无匹配分支返回 null */
-    private Liability expectedLiability(Rule rule, String firstBadHop) {
-        if (rule.getBranchesJson() == null || rule.getBranchesJson().isBlank() || firstBadHop == null) {
-            return null;
-        }
-        JSONArray branches = JSONUtil.parseArray(rule.getBranchesJson());
-        for (Object o : branches) {
-            JSONObject branch = (JSONObject) o;
-            JSONObject when = branch.getJSONObject("when");
-            if (when != null && firstBadHop.equals(when.getStr("firstBadHop"))) {
-                return Liability.of(branch.getStr("liability"));
-            }
-        }
-        return null;
     }
 }

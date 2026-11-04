@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -65,6 +66,9 @@ public class Session implements Serializable  {
 
     /** 判责原因（LLM reason，内部依据），P8 守卫通过后回写 */
     private String reason;
+
+    /** 判责结论可信度（代码打分 0~1），P8 ConfidenceScorer 计算回写；null 表示未评分（追问/失败/历史会话） */
+    private BigDecimal confidenceScore;
 
     /** 备注 */
     private String remark;
